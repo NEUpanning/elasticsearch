@@ -110,9 +110,9 @@ public class AllocationServiceTests extends ESTestCase {
         assertThat(abbreviated, not(containsString("original")));
     }
 
-    public void testAssignsPrimariesInPriorityOrderThenReplicas() {
+    public void testAssignsPrimariesInPriorityOrderThenReplicas() { //测试primary index priority较高的分片优先allocate
         // throttle (incoming) recoveries in order to observe the order of operations, but do not throttle outgoing recoveries since
-        // the effects of that depend on the earlier (random) allocations
+        // the effects of that depend on the earlier (random) allocations 一次reroute只能分配3个shard
         final Settings settings = Settings.builder()
             .put(CLUSTER_ROUTING_ALLOCATION_NODE_INITIAL_PRIMARIES_RECOVERIES_SETTING.getKey(), 1)
             .put(CLUSTER_ROUTING_ALLOCATION_NODE_CONCURRENT_INCOMING_RECOVERIES_SETTING.getKey(), 1)
@@ -141,22 +141,22 @@ public class AllocationServiceTests extends ESTestCase {
         final Map<String, ExistingShardsAllocator> allocatorMap = new HashMap<>();
         final TestGatewayAllocator testGatewayAllocator = new TestGatewayAllocator();
         allocatorMap.put(GatewayAllocator.ALLOCATOR_NAME, testGatewayAllocator);
-        allocatorMap.put(unrealisticAllocatorName, new UnrealisticAllocator());
+        allocatorMap.put(unrealisticAllocatorName, new UnrealisticAllocator());//UnrealisticAllocator可以分配shard到任何节点
         allocationService.setExistingShardsAllocators(allocatorMap);
 
-        final DiscoveryNodes.Builder nodesBuilder = DiscoveryNodes.builder();
+        final DiscoveryNodes.Builder nodesBuilder = DiscoveryNodes.builder();//构建集群节点
         nodesBuilder.add(new DiscoveryNode("node1", buildNewFakeTransportAddress(), Version.CURRENT));
         nodesBuilder.add(new DiscoveryNode("node2", buildNewFakeTransportAddress(), Version.CURRENT));
         nodesBuilder.add(new DiscoveryNode("node3", buildNewFakeTransportAddress(), Version.CURRENT));
 
-        final Metadata.Builder metadata = Metadata.builder()
+        final Metadata.Builder metadata = Metadata.builder()//构建四个索引。2 primary 1 replica
             // create 3 indices with different priorities. The high and low priority indices use the default allocator which (in this test)
             // does not allocate any replicas, whereas the medium priority one uses the unrealistic allocator which does allocate replicas
             .put(indexMetadata("highPriority", Settings.builder()
                 .put(IndexMetadata.SETTING_PRIORITY, 10)))
             .put(indexMetadata("mediumPriority", Settings.builder()
                 .put(IndexMetadata.SETTING_PRIORITY, 5)
-                .put(ExistingShardsAllocator.EXISTING_SHARDS_ALLOCATOR_SETTING.getKey(), unrealisticAllocatorName)))
+                .put(ExistingShardsAllocator.EXISTING_SHARDS_ALLOCATOR_SETTING.getKey(), unrealisticAllocatorName)))//medium可以分配replica shard
             .put(indexMetadata("lowPriority", Settings.builder()
                 .put(IndexMetadata.SETTING_PRIORITY, 3)))
 
@@ -177,7 +177,7 @@ public class AllocationServiceTests extends ESTestCase {
             .routingTable(routingTableBuilder.build())
             .build();
 
-        // permit the testGatewayAllocator to allocate primaries to every node
+        // permit the testGatewayAllocator to allocate primaries to every node   testGatewayAllocator可以分配primary到任何节点
         for (IndexRoutingTable indexRoutingTable : clusterState.routingTable()) {
             for (IndexShardRoutingTable indexShardRoutingTable : indexRoutingTable) {
                 final ShardRouting primaryShard = indexShardRoutingTable.primaryShard();

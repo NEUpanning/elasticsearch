@@ -20,9 +20,14 @@
 package org.elasticsearch.transport.client;
 
 import com.carrotsearch.randomizedtesting.RandomizedTest;
+import org.elasticsearch.action.ActionFuture;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.network.NetworkModule;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.join.ParentJoinPlugin;
 import org.elasticsearch.percolator.PercolatorPlugin;
@@ -31,7 +36,11 @@ import org.elasticsearch.script.mustache.MustachePlugin;
 import org.elasticsearch.transport.Netty4Plugin;
 import org.junit.Test;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,6 +70,32 @@ public class PreBuiltTransportClientTests extends RandomizedTest {
                         ex.getMessage().startsWith("plugin already exists: "));
             }
         }
+    }
+
+    @Test
+    public void testBulkWrite() throws UnknownHostException {
+        TransportClient client = new PreBuiltTransportClient(Settings.builder()
+            .put("cluster.name", "source-application")
+            .put("client.transport.sniff", false)
+            .build())
+            .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9302))
+            //                .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9302))
+            //                .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9303))
+            ;
+        System.out.println(client.connectedNodes().isEmpty());
+        BulkRequest bulkRequest = new BulkRequest();
+        for (int i=0;i < 10;i++) {
+            Map<String, Object> fieldMap = new HashMap<>();
+            fieldMap.put("name", "pn"+i);
+            fieldMap.put("age", i);
+            fieldMap.put("sex", "1");
+            IndexRequest indexRequest = new IndexRequest().index("student")
+                .source(fieldMap);
+            bulkRequest.add(indexRequest);
+        }
+        ActionFuture<BulkResponse> bulk = client.bulk(bulkRequest);
+        BulkResponse bulkItemResponses = bulk.actionGet();
+        System.out.println(bulkItemResponses);
     }
 
 }
