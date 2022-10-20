@@ -139,7 +139,7 @@ public class AllocationService {
         return newState;
     }
 
-    private ClusterState buildResult(ClusterState oldState, RoutingAllocation allocation) {
+    public ClusterState buildResult(ClusterState oldState, RoutingAllocation allocation) {
         final RoutingTable oldRoutingTable = oldState.routingTable();
         final RoutingNodes newRoutingNodes = allocation.routingNodes();
         final RoutingTable newRoutingTable = new RoutingTable.Builder().updateNodes(oldRoutingTable.version(), newRoutingNodes).build();

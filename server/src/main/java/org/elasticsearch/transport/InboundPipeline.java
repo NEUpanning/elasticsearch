@@ -126,7 +126,7 @@ public class InboundPipeline implements Releasable {
             }
         }
     }
-
+    //将消息解码
     private void forwardFragments(TcpChannel channel, ArrayList<Object> fragments) throws IOException {
         for (Object fragment : fragments) {
             if (fragment instanceof Header) {

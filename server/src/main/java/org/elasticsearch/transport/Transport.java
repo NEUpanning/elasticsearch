@@ -173,7 +173,7 @@ public interface Transport extends LifecycleComponent {
      */
     final class ResponseHandlers {
         private final ConcurrentMapLong<ResponseContext<? extends TransportResponse>> handlers = ConcurrentCollections
-            .newConcurrentMapLongWithAggressiveConcurrency();
+            .newConcurrentMapLongWithAggressiveConcurrency();// requestId和handler的映射，当response返回时，找到对应handler进行处理
         private final AtomicLong requestIdGenerator = new AtomicLong();
 
         /**

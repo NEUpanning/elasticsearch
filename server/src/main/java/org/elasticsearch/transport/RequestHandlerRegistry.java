@@ -69,7 +69,7 @@ public class RequestHandlerRegistry<Request extends TransportRequest> {
                 unregisterTask = Releasables.wrap(unregisterTask, stopTracking);
             }
             final TaskTransportChannel taskTransportChannel = new TaskTransportChannel(channel, unregisterTask);
-            handler.messageReceived(request, taskTransportChannel, task);
+            handler.messageReceived(request, taskTransportChannel, task);//调用handler接口的处理方法
             unregisterTask = null;
         } finally {
             Releasables.close(unregisterTask);

@@ -152,9 +152,9 @@ public abstract class TransportAction<Request extends ActionRequest, Response ex
         }
 
         RequestFilterChain<Request, Response> requestFilterChain = new RequestFilterChain<>(this, logger);
-        requestFilterChain.proceed(task, actionName, request, listener);
+        requestFilterChain.proceed(task, actionName, request, listener);//调用子类Transport*Action的doExecute方法
     }
-
+    //真正处理请求的方法，Transport*Action会实现它
     protected abstract void doExecute(Task task, Request request, ActionListener<Response> listener);
 
     private static class RequestFilterChain<Request extends ActionRequest, Response extends ActionResponse>

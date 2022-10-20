@@ -715,7 +715,7 @@ public class TransportService extends AbstractLifecycleComponent implements Repo
         Supplier<ThreadContext.StoredContext> storedContextSupplier = threadPool.getThreadContext().newRestorableContext(true);
         ContextRestoreResponseHandler<T> responseHandler = new ContextRestoreResponseHandler<>(storedContextSupplier, handler);
         // TODO we can probably fold this entire request ID dance into connection.sendReqeust but it will be a bigger refactoring
-        final long requestId = responseHandlers.add(new Transport.ResponseContext<>(responseHandler, connection, action));
+        final long requestId = responseHandlers.add(new Transport.ResponseContext<>(responseHandler, connection, action));//保存responsehandler并生成requestid
         final TimeoutHandler timeoutHandler;
         if (options.timeout() != null) {
             timeoutHandler = new TimeoutHandler(requestId, connection.getNode(), action);
@@ -895,7 +895,7 @@ public class TransportService extends AbstractLifecycleComponent implements Repo
 
     /**
      * Registers a new request handler
-     *
+     * 每个Transport*Action在构造时都会调用该方法，注册自己的action和handler
      * @param action         The action the request handler is associated with
      * @param requestReader  a callable to be used construct new instances for streaming
      * @param executor       The executor the request handling will be executed on

@@ -54,7 +54,7 @@ public abstract class HandledTransportAction<Request extends ActionRequest, Resp
                                      Writeable.Reader<Request> requestReader, String executor) {
         super(actionName, actionFilters, transportService.getTaskManager());
         transportService.registerRequestHandler(actionName, executor, false, canTripCircuitBreaker, requestReader,
-            new TransportHandler());
+            new TransportHandler());//子类Transport*Service会自动注册handler
     }
 
     class TransportHandler implements TransportRequestHandler<Request> {

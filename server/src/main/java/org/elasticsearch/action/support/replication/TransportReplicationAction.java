@@ -158,7 +158,7 @@ public abstract class TransportReplicationAction<
 
         this.initialRetryBackoffBound = REPLICATION_INITIAL_RETRY_BACKOFF_BOUND.get(settings);
         this.retryTimeout = REPLICATION_RETRY_TIMEOUT.get(settings);
-
+        //注册RequestHandler
         transportService.registerRequestHandler(actionName, ThreadPool.Names.SAME, requestReader, this::handleOperationRequest);
 
         transportService.registerRequestHandler(transportPrimaryAction, executor, forceExecutionOnPrimary, true,

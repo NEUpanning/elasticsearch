@@ -89,7 +89,7 @@ public class InboundHandler {
             // Place the context with the headers from the message
             threadContext.setHeaders(header.getHeaders());
             threadContext.putTransient("_remote_address", remoteAddress);
-            if (header.isRequest()) {
+            if (header.isRequest()) {//Client 和Server 中共同使用了这个Netty4MessageChannelHandler 回调函数。Client 在发送请求给远方的Node 的时候会把在信息的header里面标注为request 这个状态。此处判断是否为request
                 handleRequest(channel, header, message);
             } else {
                 // Responses do not support short circuiting currently
@@ -102,7 +102,7 @@ public class InboundHandler {
                     handler = handshaker.removeHandlerForHandshake(requestId);
                 } else {
                     TransportResponseHandler<? extends TransportResponse> theHandler =
-                        responseHandlers.onResponseReceived(requestId, messageListener);
+                        responseHandlers.onResponseReceived(requestId, messageListener);//根据requestId找到TransportResponseHandler
                     if (theHandler == null && header.isError()) {
                         handler = handshaker.removeHandlerForHandshake(requestId);
                     } else {
@@ -162,7 +162,7 @@ public class InboundHandler {
                 } else {
                     final StreamInput stream = namedWriteableStream(message.openOrGetStreamInput());
                     assertRemoteVersion(stream, header.getVersion());
-                    final RequestHandlerRegistry<T> reg = requestHandlers.getHandler(action);
+                    final RequestHandlerRegistry<T> reg = requestHandlers.getHandler(action);//找到该action的handler
                     assert reg != null;
                     final T request = reg.newRequest(stream);
                     request.remoteAddress(new TransportAddress(channel.getRemoteAddress()));
@@ -173,7 +173,7 @@ public class InboundHandler {
                         throw new IllegalStateException("Message not fully read (request) for requestId [" + requestId + "], action ["
                             + action + "], available [" + stream.available() + "]; resetting");
                     }
-                    threadPool.executor(reg.getExecutor()).execute(new RequestHandler<>(reg, request, transportChannel));
+                    threadPool.executor(reg.getExecutor()).execute(new RequestHandler<>(reg, request, transportChannel));//使用注册标记的线程池执行handler
                 }
             } catch (Exception e) {
                 sendErrorResponse(action, transportChannel, e);

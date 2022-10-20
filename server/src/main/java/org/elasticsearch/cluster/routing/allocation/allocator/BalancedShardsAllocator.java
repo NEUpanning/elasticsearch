@@ -474,7 +474,7 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                 int relevantNodes = 0;
                 for (int i = 0; i < modelNodes.length; i++) {
                     ModelNode modelNode = modelNodes[i];
-                    if (modelNode.getIndex(index) != null
+                    if (modelNode.getIndex(index) != null  // 节点有该索引分片可以迁移或者该分片可以迁移到这个节点
                         || deciders.canAllocate(indexMetadata, modelNode.getRoutingNode(), allocation).type() != Type.NO) {
                         // swap nodes at position i and relevantNodes
                         modelNodes[i] = modelNodes[relevantNodes];
@@ -811,12 +811,12 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                         if (logger.isTraceEnabled()) {
                             logger.trace("Assigned shard [{}] to [{}]", shard, minNode.getNodeId());
                         }
-
+                        // 获取shard的大小，新建的shard返回-1
                         final long shardSize = DiskThresholdDecider.getExpectedShardSize(shard,
                             ShardRouting.UNAVAILABLE_EXPECTED_SHARD_SIZE,
                             allocation.clusterInfo(), allocation.metadata(), allocation.routingTable());
-                        shard = routingNodes.initializeShard(shard, minNode.getNodeId(), null, shardSize, allocation.changes());
-                        minNode.addShard(shard);
+                        shard = routingNodes.initializeShard(shard, minNode.getNodeId(), null, shardSize, allocation.changes());// 更新routingnodes，即更新元数据
+                        minNode.addShard(shard); //更新modelnode模型
                         if (!shard.primary()) {
                             // copy over the same replica shards to the secondary array so they will get allocated
                             // in a subsequent iteration, allowing replicas of other shards to be allocated first
@@ -837,10 +837,10 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                             final long shardSize = DiskThresholdDecider.getExpectedShardSize(shard,
                                 ShardRouting.UNAVAILABLE_EXPECTED_SHARD_SIZE,
                                 allocation.clusterInfo(), allocation.metadata(), allocation.routingTable());
-                            minNode.addShard(shard.initialize(minNode.getNodeId(), null, shardSize));
+                            minNode.addShard(shard.initialize(minNode.getNodeId(), null, shardSize));//返回结果为throttled也更新modelnode模型
                             final RoutingNode node = minNode.getRoutingNode();
                             final Decision.Type nodeLevelDecision = deciders.canAllocate(node, allocation).type();
-                            if (nodeLevelDecision != Type.YES) {
+                            if (nodeLevelDecision != Type.YES) {//判断这次throttle的节点是否可以allocate，不可以则加入throttledNodes，本次分片分配不会考虑。该操作放在decideAllocateUnassigned方法中，会更早的过滤掉节点？
                                 if (logger.isTraceEnabled()) {
                                     logger.trace("Can not allocate on node [{}] remove from round decision [{}]", node,
                                         allocationDecision.getAllocationStatus());
@@ -854,7 +854,7 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                             }
                         }
 
-                        unassigned.ignoreShard(shard, allocationDecision.getAllocationStatus(), allocation.changes());
+                        unassigned.ignoreShard(shard, allocationDecision.getAllocationStatus(), allocation.changes());//标记分片忽略分配
                         if (!shard.primary()) { // we could not allocate it and we are a replica - check if we can ignore the other replicas
                             while(i < primaryLength-1 && comparator.compare(primary[i], primary[i+1]) == 0) {
                                 unassigned.ignoreShard(primary[++i], allocationDecision.getAllocationStatus(), allocation.changes());
@@ -919,7 +919,7 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                 Decision currentDecision = allocation.deciders().canAllocate(shard, node.getRoutingNode(), allocation);
                 if (explain) {
                     nodeExplanationMap.put(node.getNodeId(),
-                        new NodeAllocationResult(node.getRoutingNode().node(), currentDecision, 0));
+                        new NodeAllocationResult(node.getRoutingNode().node(), currentDecision, 0));// 保存该分片在每个节点的decision和weight
                     nodeWeights.add(Tuple.tuple(node.getNodeId(), currentWeight));
                 }
                 if (currentDecision.type() == Type.YES || currentDecision.type() == Type.THROTTLE) {
@@ -969,7 +969,7 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                 int weightRanking = 0;
                 for (Tuple<String, Float> nodeWeight : nodeWeights) {
                     NodeAllocationResult current = nodeExplanationMap.get(nodeWeight.v1());
-                    nodeDecisions.add(new NodeAllocationResult(current.getNode(), current.getCanAllocateDecision(), ++weightRanking));
+                    nodeDecisions.add(new NodeAllocationResult(current.getNode(), current.getCanAllocateDecision(), ++weightRanking));// 每个节点的决策信息保存返回
                 }
             }
             return AllocateUnassignedDecision.fromDecision(

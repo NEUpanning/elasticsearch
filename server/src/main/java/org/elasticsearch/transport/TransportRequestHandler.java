@@ -20,7 +20,7 @@
 package org.elasticsearch.transport;
 
 import org.elasticsearch.tasks.Task;
-
+//处理远方节点发来请求，它会根据发来请求做出对应的操作
 public interface TransportRequestHandler<T extends TransportRequest> {
 
     void messageReceived(T request, TransportChannel channel, Task task) throws Exception;

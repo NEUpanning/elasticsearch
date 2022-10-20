@@ -63,7 +63,7 @@ import java.util.function.BiFunction;
 
 /**
  * An encapsulation of {@link org.elasticsearch.search.SearchService} operations exposed through
- * transport.
+ * transport.使用transportservice发出search相关的request
  */
 public class SearchTransportService {
 
@@ -283,7 +283,7 @@ public class SearchTransportService {
         transportService.registerRequestHandler(FREE_CONTEXT_SCROLL_ACTION_NAME, ThreadPool.Names.SAME, ScrollFreeContextRequest::new,
             (request, channel, task) -> {
                 boolean freed = searchService.freeContext(request.id());
-                channel.sendResponse(new SearchFreeContextResponse(freed));
+                channel.sendResponse(new SearchFreeContextResponse(freed));//实际上最后触发的是netty的 ctx.write，也就是将messge传递给下个handler
         });
         TransportActionProxy.registerProxyAction(transportService, FREE_CONTEXT_SCROLL_ACTION_NAME, SearchFreeContextResponse::new);
         transportService.registerRequestHandler(FREE_CONTEXT_ACTION_NAME, ThreadPool.Names.SAME, SearchFreeContextRequest::new,

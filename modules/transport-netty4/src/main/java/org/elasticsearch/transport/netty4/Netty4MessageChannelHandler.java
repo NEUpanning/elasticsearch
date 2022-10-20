@@ -58,7 +58,7 @@ final class Netty4MessageChannelHandler extends ChannelDuplexHandler {
     Netty4MessageChannelHandler(PageCacheRecycler recycler, Netty4Transport transport) {
         this.transport = transport;
         final ThreadPool threadPool = transport.getThreadPool();
-        final Transport.RequestHandlers requestHandlers = transport.getRequestHandlers();
+        final Transport.RequestHandlers requestHandlers = transport.getRequestHandlers();//包含所有类型action的handler
         this.pipeline = new InboundPipeline(transport.getVersion(), transport.getStatsTracker(), recycler, threadPool::relativeTimeInMillis,
             transport.getInflightBreaker(), requestHandlers::getHandler, transport::inboundMessage);
     }
@@ -73,7 +73,7 @@ final class Netty4MessageChannelHandler extends ChannelDuplexHandler {
         Netty4TcpChannel channel = ctx.channel().attr(Netty4Transport.CHANNEL_KEY).get();
         final BytesReference wrapped = Netty4Utils.toBytesReference(buffer);
         try (ReleasableBytesReference reference = new ReleasableBytesReference(wrapped, buffer::release)) {
-            pipeline.handleBytes(channel, reference);
+            pipeline.handleBytes(channel, reference);//解码消息
         }
     }
 

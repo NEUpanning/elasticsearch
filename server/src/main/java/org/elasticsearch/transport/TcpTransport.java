@@ -128,8 +128,8 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
     private final TransportHandshaker handshaker;
     private final TransportKeepAlive keepAlive;
-    private final OutboundHandler outboundHandler;
-    private final InboundHandler inboundHandler;
+    private final OutboundHandler outboundHandler;//处理出流量
+    private final InboundHandler inboundHandler;//处理入流量
     private final ResponseHandlers responseHandlers = new ResponseHandlers();
     private final RequestHandlers requestHandlers = new RequestHandlers();
 
@@ -196,7 +196,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     public final class NodeChannels extends CloseableConnection {
-        private final Map<TransportRequestOptions.Type, ConnectionProfile.ConnectionTypeHandle> typeMapping;
+        private final Map<TransportRequestOptions.Type, ConnectionProfile.ConnectionTypeHandle> typeMapping;//保存节点间的长连接
         private final List<TcpChannel> channels;
         private final DiscoveryNode node;
         private final Version version;
@@ -292,7 +292,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         assert numConnections > 0 : "A connection profile must be configured with at least one connection";
 
         final List<TcpChannel> channels = new ArrayList<>(numConnections);
-
+        //和节点创建多个channel(connection)
         for (int i = 0; i < numConnections; ++i) {
             try {
                 TcpChannel channel = initiateChannel(node);
@@ -308,7 +308,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 return channels;
             }
         }
-
+        //channel将保存在ChannelsConnectedListener中，channelsConnectedListener的response方法将channel保存
         ChannelsConnectedListener channelsConnectedListener = new ChannelsConnectedListener(node, connectionProfile, channels,
             new ThreadedActionListener<>(logger, threadPool, ThreadPool.Names.GENERIC, listener, false));
 

@@ -80,7 +80,7 @@ public class NodeClient extends AbstractClient {
     public <    Request extends ActionRequest,
                 Response extends ActionResponse
             > Task executeLocally(ActionType<Response> action, Request request, ActionListener<Response> listener) {
-        return transportAction(action).execute(request, listener);
+        return transportAction(action).execute(request, listener);//本地执行时，直接通过actionmodule中保存的映射找到处理的Transport*Action,执行完成后直接触发listener
     }
 
     /**

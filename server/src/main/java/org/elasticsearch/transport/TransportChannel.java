@@ -37,7 +37,7 @@ public interface TransportChannel {
 
     String getChannelType();
 
-    void sendResponse(TransportResponse response) throws IOException;
+    void sendResponse(TransportResponse response) throws IOException;//实际上最后触发的是netty的 ctx.write，也就是将message传递给下个handler
 
     void sendResponse(Exception exception) throws IOException;
 
