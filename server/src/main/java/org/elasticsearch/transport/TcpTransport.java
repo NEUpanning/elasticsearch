@@ -308,12 +308,13 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 return channels;
             }
         }
-        //channel将保存在ChannelsConnectedListener中，channelsConnectedListener的response方法将channel保存
+        //channel将保存在ChannelsConnectedListener中，channelsConnectedListener的response方法将channel通过listener返回，channel最终保存在ClusterConnectionManager
         ChannelsConnectedListener channelsConnectedListener = new ChannelsConnectedListener(node, connectionProfile, channels,
             new ThreadedActionListener<>(logger, threadPool, ThreadPool.Names.GENERIC, listener, false));
 
         for (TcpChannel channel : channels) {
             channel.addConnectListener(channelsConnectedListener);
+            System.out.println(channel.getLocalAddress());
         }
 
         TimeValue connectTimeout = connectionProfile.getConnectTimeout();

@@ -440,7 +440,7 @@ public class AllocationService {
         final RoutingNodes.UnassignedShards.UnassignedIterator primaryIterator = allocation.routingNodes().unassigned().iterator();
         while (primaryIterator.hasNext()) {
             final ShardRouting shardRouting = primaryIterator.next();
-            if (shardRouting.primary()) {
+            if (shardRouting.primary()) {// 遍历所有primary
                 getAllocatorForShard(shardRouting, allocation).allocateUnassigned(shardRouting, allocation, primaryIterator);
             }
         }
@@ -452,7 +452,7 @@ public class AllocationService {
         final RoutingNodes.UnassignedShards.UnassignedIterator replicaIterator = allocation.routingNodes().unassigned().iterator();
         while (replicaIterator.hasNext()) {
             final ShardRouting shardRouting = replicaIterator.next();
-            if (shardRouting.primary() == false) {
+            if (shardRouting.primary() == false) {// 遍历所有replica
                 getAllocatorForShard(shardRouting, allocation).allocateUnassigned(shardRouting, allocation, replicaIterator);
             }
         }
@@ -544,8 +544,8 @@ public class AllocationService {
     private ExistingShardsAllocator getAllocatorForShard(ShardRouting shardRouting, RoutingAllocation routingAllocation) {
         assert assertInitialized();
         final String allocatorName = ExistingShardsAllocator.EXISTING_SHARDS_ALLOCATOR_SETTING.get(
-            routingAllocation.metadata().getIndexSafe(shardRouting.index()).getSettings());
-        final ExistingShardsAllocator existingShardsAllocator = existingShardsAllocators.get(allocatorName);
+            routingAllocation.metadata().getIndexSafe(shardRouting.index()).getSettings());// 获取分配节点上有数据分片使用的allocator
+        final ExistingShardsAllocator existingShardsAllocator = existingShardsAllocators.get(allocatorName);// 默认是gateway allocator
         return existingShardsAllocator != null ? existingShardsAllocator : new NotFoundAllocator(allocatorName);
     }
 

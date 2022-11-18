@@ -164,7 +164,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
     @Override
     protected void doExecute(Task task, BulkRequest bulkRequest, ActionListener<BulkResponse> listener) {
         long indexingBytes = bulkRequest.ramBytesUsed();
-        final Releasable releasable = indexingPressure.markCoordinatingOperationStarted(indexingBytes);
+        final Releasable releasable = indexingPressure.markCoordinatingOperationStarted(indexingBytes);// 记录indexingPressure的指标
         final ActionListener<BulkResponse> releasingListener = ActionListener.runBefore(listener, releasable::close);
         try {
             doInternalExecute(task, bulkRequest, releasingListener);
@@ -181,7 +181,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         final Metadata metadata = clusterService.state().getMetadata();
         final Version minNodeVersion = clusterService.state().getNodes().getMinNodeVersion();
         for (DocWriteRequest<?> actionRequest : bulkRequest.requests) {
-            IndexRequest indexRequest = getIndexWriteRequest(actionRequest);
+            IndexRequest indexRequest = getIndexWriteRequest(actionRequest);// 从DocWriteRequest中的index update拿到index request
             if (indexRequest != null) {
                 // Each index request needs to be evaluated, because this method also modifies the IndexRequest
                 boolean indexRequestHasPipeline = IngestService.resolvePipelines(actionRequest, indexRequest, metadata);
@@ -240,7 +240,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             for (String index : indices) {
                 boolean shouldAutoCreate;
                 try {
-                    shouldAutoCreate = shouldAutoCreate(index, state);
+                    shouldAutoCreate = shouldAutoCreate(index, state);//判断是否应该自动创建
                 } catch (IndexNotFoundException e) {
                     shouldAutoCreate = false;
                     indicesThatCannotBeCreated.put(index, e);
@@ -256,10 +256,10 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 final AtomicInteger counter = new AtomicInteger(autoCreateIndices.size());
                 for (String index : autoCreateIndices) {
                     createIndex(index, bulkRequest.timeout(), minNodeVersion,
-                        new ActionListener<CreateIndexResponse>() {
+                        new ActionListener<CreateIndexResponse>() {//并发创建索引
                         @Override
                         public void onResponse(CreateIndexResponse result) {
-                            if (counter.decrementAndGet() == 0) {
+                            if (counter.decrementAndGet() == 0) {//当所有索引创建完成时，执行bulk
                                 threadPool.executor(ThreadPool.Names.WRITE).execute(
                                     () -> executeBulk(task, bulkRequest, startTime, listener, responses, indicesThatCannotBeCreated));
                             }
@@ -405,7 +405,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         protected void doRun() {
             assert bulkRequest != null;
             final ClusterState clusterState = observer.setAndGetObservedState();
-            if (handleBlockExceptions(clusterState)) {
+            if (handleBlockExceptions(clusterState)) {//写入block检查
                 return;
             }
             final ConcreteIndices concreteIndices = new ConcreteIndices(clusterState, indexNameExpressionResolver);
@@ -415,7 +415,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 //the request can only be null because we set it to null in the previous step, so it gets ignored
                 if (docWriteRequest == null) {
                     continue;
-                }
+                }//索引存在且是open状态才能继续写入数据
                 if (addFailureIfIndexIsUnavailable(docWriteRequest, i, concreteIndices, metadata)) {
                     continue;
                 }
@@ -424,14 +424,14 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     switch (docWriteRequest.opType()) {
                         case CREATE:
                         case INDEX:
-                            prohibitAppendWritesInBackingIndices(docWriteRequest, metadata);
-                            prohibitCustomRoutingOnDataStream(docWriteRequest, metadata);
+                            prohibitAppendWritesInBackingIndices(docWriteRequest, metadata);//DataStream的控制流程
+                            prohibitCustomRoutingOnDataStream(docWriteRequest, metadata);//同上
                             IndexRequest indexRequest = (IndexRequest) docWriteRequest;
                             final IndexMetadata indexMetadata = metadata.index(concreteIndex);
                             MappingMetadata mappingMd = indexMetadata.mappingOrDefault();
                             Version indexCreated = indexMetadata.getCreationVersion();
-                            indexRequest.resolveRouting(metadata);
-                            indexRequest.process(indexCreated, mappingMd, concreteIndex.getName());
+                            indexRequest.resolveRouting(metadata);//配置routing
+                            indexRequest.process(indexCreated, mappingMd, concreteIndex.getName());//为doc生成ID
                             break;
                         case UPDATE:
                             TransportUpdateAction.resolveAndValidateRouting(metadata, concreteIndex.getName(),
@@ -465,7 +465,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 }
                 String concreteIndex = concreteIndices.getConcreteIndex(request.index()).getName();
                 ShardId shardId = clusterService.operationRouting().indexShards(clusterState, concreteIndex, request.id(),
-                    request.routing()).shardId();
+                    request.routing()).shardId();//计算出shard id
                 List<BulkItemRequest> shardRequests = requestsByShard.computeIfAbsent(shardId, shard -> new ArrayList<>());
                 shardRequests.add(new BulkItemRequest(i, request));
             }
@@ -488,7 +488,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 bulkShardRequest.routedBasedOnClusterVersion(clusterState.version());
                 if (task != null) {
                     bulkShardRequest.setParentTask(nodeId, task.getId());
-                }
+                }//发往同个shard的request异步转发
                 shardBulkAction.execute(bulkShardRequest, new ActionListener<BulkShardResponse>() {
                     @Override
                     public void onResponse(BulkShardResponse bulkShardResponse) {

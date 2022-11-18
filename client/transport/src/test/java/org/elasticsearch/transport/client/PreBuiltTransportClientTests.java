@@ -77,19 +77,19 @@ public class PreBuiltTransportClientTests extends RandomizedTest {
         TransportClient client = new PreBuiltTransportClient(Settings.builder()
             .put("cluster.name", "source-application")
             .put("client.transport.sniff", false)
+            .put("xpack.security.user", "elastic:123456")
             .build())
             .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9302))
             //                .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9302))
             //                .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9303))
             ;
-        System.out.println(client.connectedNodes().isEmpty());
         BulkRequest bulkRequest = new BulkRequest();
         for (int i=0;i < 10;i++) {
             Map<String, Object> fieldMap = new HashMap<>();
             fieldMap.put("name", "pn"+i);
             fieldMap.put("age", i);
             fieldMap.put("sex", "1");
-            IndexRequest indexRequest = new IndexRequest().index("student")
+            IndexRequest indexRequest = new IndexRequest().index("a2")
                 .source(fieldMap);
             bulkRequest.add(indexRequest);
         }

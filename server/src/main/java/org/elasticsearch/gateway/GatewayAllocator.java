@@ -239,11 +239,11 @@ public class GatewayAllocator implements ExistingShardsAllocator {
                 asyncFetchStarted.computeIfAbsent(shard.shardId(),
                     shardId -> new InternalAsyncFetch<>(logger, "shard_started", shardId,
                         IndexMetadata.INDEX_DATA_PATH_SETTING.get(allocation.metadata().index(shard.index()).getSettings()),
-                        startedAction));
+                        startedAction));// 保存新启动的fetch。fetch为新创建的AsyncShardFetch或者是旧的AsyncShardFetch
             AsyncShardFetch.FetchResult<TransportNodesListGatewayStartedShards.NodeGatewayStartedShards> shardState =
-                    fetch.fetchData(allocation.nodes(), allocation.getIgnoreNodes(shard.shardId()));
+                    fetch.fetchData(allocation.nodes(), allocation.getIgnoreNodes(shard.shardId()));//如果没有发起fetch则发起。fetch已返回则拿到结果，否则返回null
 
-            if (shardState.hasData()) {
+            if (shardState.hasData()) {// 获取到了所有的节点该shard 的元数据
                 shardState.processAllocation(allocation);
             }
             return shardState;

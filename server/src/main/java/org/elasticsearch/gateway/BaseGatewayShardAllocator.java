@@ -66,7 +66,7 @@ public abstract class BaseGatewayShardAllocator {
                 allocateUnassignedDecision.getAllocationId(),
                 shardRouting.primary() ? ShardRouting.UNAVAILABLE_EXPECTED_SHARD_SIZE :
                                          allocation.clusterInfo().getShardSize(shardRouting, ShardRouting.UNAVAILABLE_EXPECTED_SHARD_SIZE),
-                allocation.changes());
+                allocation.changes());// 分片分配给对应节点
         } else {
             unassignedAllocationHandler.removeAndIgnore(allocateUnassignedDecision.getAllocationStatus(), allocation.changes());
         }

@@ -396,7 +396,7 @@ public class TransportService extends AbstractLifecycleComponent implements Repo
      * responsibility to close the connection once it goes out of scope.
      * The ActionListener will be called on the calling thread or the generic thread pool.
      * @param node the node to connect to
-     * @param connectionProfile the connection profile to use
+     * @param connectionProfile the connection profile to use这里创建的链接不会维护，用完就close了
      */
     public Transport.Connection openConnection(final DiscoveryNode node, ConnectionProfile connectionProfile) {
         return PlainActionFuture.get(fut -> openConnection(node, connectionProfile, fut));

@@ -114,10 +114,10 @@ public class GlobalCheckpointSyncAction extends TransportReplicationAction<
             return new ReplicaResult();
         });
     }
-
+    // translog配置的request模式，且translog的checkpoint小于globalcheckpoint会sync translog
     private void maybeSyncTranslog(final IndexShard indexShard) throws IOException {
         if (indexShard.getTranslogDurability() == Translog.Durability.REQUEST &&
-            indexShard.getLastSyncedGlobalCheckpoint() < indexShard.getLastKnownGlobalCheckpoint()) {
+            indexShard.getLastSyncedGlobalCheckpoint() < indexShard.getLastKnownGlobalCheckpoint()) {//一般不会走
             indexShard.sync();
         }
     }

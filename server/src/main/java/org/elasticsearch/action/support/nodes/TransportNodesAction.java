@@ -183,12 +183,12 @@ public abstract class TransportNodesAction<NodesRequest extends BaseNodesRequest
                     if (task != null) {
                         nodeRequest.setParentTask(clusterService.localNode().getId(), task.getId());
                     }
-
+                    //多个节点一次send request
                     transportService.sendRequest(node, getTransportNodeAction(node), nodeRequest, builder.build(),
                             new TransportResponseHandler<NodeResponse>() {
                                 @Override
                                 public NodeResponse read(StreamInput in) throws IOException {
-                                    return newNodeResponse(in);
+                                    return newNodeResponse(in);//反序列化单节点的response
                                 }
 
                                 @Override
@@ -215,7 +215,7 @@ public abstract class TransportNodesAction<NodesRequest extends BaseNodesRequest
         private void onOperation(int idx, NodeResponse nodeResponse) {
             responses.set(idx, nodeResponse);
             if (counter.incrementAndGet() == responses.length()) {
-                finishHim();
+                finishHim();// 收到所有节点返回时执行
             }
         }
 
@@ -232,13 +232,13 @@ public abstract class TransportNodesAction<NodesRequest extends BaseNodesRequest
         private void finishHim() {
             NodesResponse finalResponse;
             try {
-                finalResponse = newResponse(request, responses);
+                finalResponse = newResponse(request, responses);//将多个节点的response搞成一个
             } catch (Exception e) {
                 logger.debug("failed to combine responses from nodes", e);
                 listener.onFailure(e);
                 return;
             }
-            listener.onResponse(finalResponse);
+            listener.onResponse(finalResponse);//触发listener
         }
     }
 

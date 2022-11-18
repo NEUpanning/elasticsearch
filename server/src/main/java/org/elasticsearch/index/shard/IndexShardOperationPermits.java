@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-/**
+/**实现了一个block operation使得之后的operation都延迟执行放在队列中，等待已经获取permit的operation执行完成后执行block operation，block operation执行完成后，再执行队列中的operation
  * Tracks shard operation permits. Each operation on the shard obtains a permit. When we need to block operations (e.g., to transition
  * between terms) we immediately delay all operations to a queue, obtain all available permits, and wait for outstanding operations to drain
  * and return their permits. Delayed operations will acquire permits and be completed after the operation that blocked all operations has
@@ -289,7 +289,7 @@ final class IndexShardOperationPermits implements Closeable {
         assert Thread.holdsLock(this);
         if (semaphore.tryAcquire(1, 0, TimeUnit.SECONDS)) { // the un-timed tryAcquire methods do not honor the fairness setting
             final AtomicBoolean closed = new AtomicBoolean();
-            final Releasable releasable = () -> {
+            final Releasable releasable = () -> {// 释放permits信号量
                 if (closed.compareAndSet(false, true)) {
                     if (Assertions.ENABLED) {
                         Tuple<String, StackTraceElement[]> existing = issuedPermits.remove(closed);
@@ -298,7 +298,7 @@ final class IndexShardOperationPermits implements Closeable {
                     semaphore.release(1);
                 }
             };
-            if (Assertions.ENABLED) {
+            if (Assertions.ENABLED) {// 默认为false。
                 issuedPermits.put(closed, new Tuple<>(debugInfo.toString(), stackTrace));
             }
             return releasable;

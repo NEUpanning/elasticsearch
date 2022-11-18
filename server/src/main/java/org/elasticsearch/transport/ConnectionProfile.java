@@ -79,7 +79,7 @@ public final class ConnectionProfile {
         int connectionsPerNodeState = TransportSettings.CONNECTIONS_PER_NODE_STATE.get(settings);
         int connectionsPerNodePing = TransportSettings.CONNECTIONS_PER_NODE_PING.get(settings);
         Builder builder = new Builder();
-        builder.setConnectTimeout(TransportSettings.CONNECT_TIMEOUT.get(settings));
+        builder.setConnectTimeout(TransportSettings.CONNECT_TIMEOUT.get(settings)); // connection的相关配置
         builder.setHandshakeTimeout(TransportSettings.CONNECT_TIMEOUT.get(settings));
         builder.setPingInterval(TransportSettings.PING_SCHEDULE.get(settings));
         builder.setCompressionEnabled(TransportSettings.TRANSPORT_COMPRESS.get(settings));

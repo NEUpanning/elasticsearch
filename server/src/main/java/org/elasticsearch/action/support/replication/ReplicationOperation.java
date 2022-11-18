@@ -108,11 +108,11 @@ public class ReplicationOperation<
     }
 
     public void execute() throws Exception {
-        final String activeShardCountFailure = checkActiveShardCount();
+        final String activeShardCountFailure = checkActiveShardCount();//默认需要该shard至少有一个可用，即主分片必须存在
         final ShardRouting primaryRouting = primary.routingEntry();
         final ShardId primaryId = primaryRouting.shardId();
         if (activeShardCountFailure != null) {
-            finishAsFailed(new UnavailableShardsException(primaryId,
+            finishAsFailed(new UnavailableShardsException(primaryId,//没有主分片返回错误
                 "{} Timeout: [{}], request: [{}]", activeShardCountFailure, request.timeout(), request));
             return;
         }
@@ -142,10 +142,10 @@ public class ReplicationOperation<
             // on.
             final long maxSeqNoOfUpdatesOrDeletes = primary.maxSeqNoOfUpdatesOrDeletes();
             assert maxSeqNoOfUpdatesOrDeletes != SequenceNumbers.UNASSIGNED_SEQ_NO : "seqno_of_updates still uninitialized";
-            final ReplicationGroup replicationGroup = primary.getReplicationGroup();
+            final ReplicationGroup replicationGroup = primary.getReplicationGroup();// 分片的ReplicationGroup
             final PendingReplicationActions pendingReplicationActions = primary.getPendingReplicationActions();
             markUnavailableShardsAsStale(replicaRequest, replicationGroup);
-            performOnReplicas(replicaRequest, globalCheckpoint, maxSeqNoOfUpdatesOrDeletes, replicationGroup, pendingReplicationActions);
+            performOnReplicas(replicaRequest, globalCheckpoint, maxSeqNoOfUpdatesOrDeletes, replicationGroup, pendingReplicationActions);// 执行写副本的操作
         }
         primaryResult.runPostReplicationActions(new ActionListener<Void>() {
 
@@ -189,7 +189,7 @@ public class ReplicationOperation<
 
         for (final ShardRouting shard : replicationGroup.getReplicationTargets()) {
             if (shard.isSameAllocation(primaryRouting) == false) {
-                performOnReplica(shard, replicaRequest, globalCheckpoint, maxSeqNoOfUpdatesOrDeletes, pendingReplicationActions);
+                performOnReplica(shard, replicaRequest, globalCheckpoint, maxSeqNoOfUpdatesOrDeletes, pendingReplicationActions);// 非primary执行副本同步数据操作
             }
         }
     }
@@ -207,9 +207,9 @@ public class ReplicationOperation<
             public void onResponse(ReplicaResponse response) {
                 successfulShards.incrementAndGet();
                 try {
-                    updateCheckPoints(shard, response::localCheckpoint, response::globalCheckpoint);
+                    updateCheckPoints(shard, response::localCheckpoint, response::globalCheckpoint);// 更新主分片上记录的Checkpoint。以及全局globalcheckpoint
                 } finally {
-                    decPendingAndFinishIfNeeded();
+                    decPendingAndFinishIfNeeded();// replica均返回时进行finish
                 }
             }
 
@@ -338,7 +338,7 @@ public class ReplicationOperation<
                 failuresArray = new ReplicationResponse.ShardInfo.Failure[shardReplicaFailures.size()];
                 shardReplicaFailures.toArray(failuresArray);
             }
-            primaryResult.setShardInfo(new ReplicationResponse.ShardInfo(
+            primaryResult.setShardInfo(new ReplicationResponse.ShardInfo(//bulk write结果信息
                     totalShards.get(),
                     successfulShards.get(),
                     failuresArray

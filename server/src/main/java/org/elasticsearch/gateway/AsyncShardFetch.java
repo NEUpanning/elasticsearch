@@ -116,18 +116,18 @@ public abstract class AsyncShardFetch<T extends BaseNodeResponse> implements Rel
             throw new IllegalStateException(shardId + ": can't fetch data on closed async fetch");
         }
         nodesToIgnore.addAll(ignoreNodes);
-        fillShardCacheWithDataNodes(cache, nodes);
+        fillShardCacheWithDataNodes(cache, nodes); //初始化cache，列表为索引data节点
         List<NodeEntry<T>> nodesToFetch = findNodesToFetch(cache);
         if (nodesToFetch.isEmpty() == false) {
             // mark all node as fetching and go ahead and async fetch them
             // use a unique round id to detect stale responses in processAsyncFetch
             final long fetchingRound = round.incrementAndGet();
             for (NodeEntry<T> nodeEntry : nodesToFetch) {
-                nodeEntry.markAsFetching(fetchingRound);
+                nodeEntry.markAsFetching(fetchingRound);// 标记为fetching
             }
             DiscoveryNode[] discoNodesToFetch = nodesToFetch.stream().map(NodeEntry::getNodeId).map(nodes::get)
                 .toArray(DiscoveryNode[]::new);
-            asyncFetch(discoNodesToFetch, fetchingRound);
+            asyncFetch(discoNodesToFetch, fetchingRound);//异步拉取所有节点
         }
 
         // if we are still fetching, return null to indicate it
@@ -197,7 +197,7 @@ public abstract class AsyncShardFetch<T extends BaseNodeResponse> implements Rel
                     } else {
                         // if the entry is there, for the right fetching round and not marked as failed already, process it
                         logger.trace("{} marking {} as done for [{}], result is [{}]", shardId, nodeEntry.getNodeId(), type, response);
-                        nodeEntry.doneFetching(response);
+                        nodeEntry.doneFetching(response);// response保存，状态置位
                     }
                 }
             }
@@ -291,8 +291,8 @@ public abstract class AsyncShardFetch<T extends BaseNodeResponse> implements Rel
     // visible for testing
     void asyncFetch(final DiscoveryNode[] nodes, long fetchingRound) {
         logger.trace("{} fetching [{}] from {}", shardId, type, nodes);
-        action.list(shardId, customDataPath, nodes, new ActionListener<BaseNodesResponse<T>>() {
-            @Override
+        action.list(shardId, customDataPath, nodes, new ActionListener<BaseNodesResponse<T>>() {//异步发送shard元数据拉取请求
+            @Override// action.list会将所有节点的response搞成一个再触发onResponse
             public void onResponse(BaseNodesResponse<T> response) {
                 processAsyncFetch(response.getNodes(), response.failures(), fetchingRound);
             }

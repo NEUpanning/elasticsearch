@@ -136,7 +136,7 @@ public class ClusterConnectionManager implements ConnectionManager {
         currentListener.addListener(listener, EsExecutors.newDirectExecutorService());
 
         final RunOnce releaseOnce = new RunOnce(connectingRefCounter::decRef);
-        internalOpenConnection(node, resolvedProfile, ActionListener.wrap(conn -> {
+        internalOpenConnection(node, resolvedProfile, ActionListener.wrap(conn -> { //成功和节点建立连接后，保存连接
             connectionValidator.validate(conn, resolvedProfile, ActionListener.wrap(
                 ignored -> {
                     assert Transports.assertNotTransportThread("connection validator success");

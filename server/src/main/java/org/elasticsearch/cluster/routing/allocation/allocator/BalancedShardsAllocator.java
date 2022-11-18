@@ -411,11 +411,11 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                     }
                 }
                 Tuple<ModelNode, Decision> nodeResult = Tuple.tuple(node, canAllocate);
-                if (rebalanceConditionsMet) {
+                if (rebalanceConditionsMet) { //分片移到该节点可以使得集群更均衡，也就是该节点的权重小于分片所在节点权重减去阈值
                     betterBalanceNodes.add(nodeResult);
-                } else if (betterWeightThanCurrent) {
+                } else if (betterWeightThanCurrent) {//分片移到该节点使得集群均衡程度不会发生变化
                     sameBalanceNodes.add(nodeResult);
-                } else {
+                } else {///分片移到该节点可以使得集群更不均衡，也就是该节点的权重大于分片所在节点权重
                     worseBalanceNodes.add(nodeResult);
                 }
             }
@@ -427,7 +427,7 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                     result.v1().routingNode.node(), AllocationDecision.fromDecisionType(result.v2().type()), result.v2(), ++weightRanking)
                 );
             }
-            int currentNodeWeightRanking = ++weightRanking;
+            int currentNodeWeightRanking = ++weightRanking;//如果该节点不会使得集群均衡程度不会发生变化，那么WeightRanking和原节点一样
             for (Tuple<ModelNode, Decision> result : sameBalanceNodes) {
                 AllocationDecision nodeDecision = result.v2().type() == Type.NO ? AllocationDecision.NO : AllocationDecision.WORSE_BALANCE;
                 nodeDecisions.add(new NodeAllocationResult(
@@ -815,7 +815,7 @@ public class BalancedShardsAllocator implements ShardsAllocator {
                         final long shardSize = DiskThresholdDecider.getExpectedShardSize(shard,
                             ShardRouting.UNAVAILABLE_EXPECTED_SHARD_SIZE,
                             allocation.clusterInfo(), allocation.metadata(), allocation.routingTable());
-                        shard = routingNodes.initializeShard(shard, minNode.getNodeId(), null, shardSize, allocation.changes());// 更新routingnodes，即更新元数据
+                        shard = routingNodes.initializeShard(shard, minNode.getNodeId(), null, shardSize, allocation.changes());// 更新routingnodes，即更新元数据，创建新的shardrouting包含新的allocationId
                         minNode.addShard(shard); //更新modelnode模型
                         if (!shard.primary()) {
                             // copy over the same replica shards to the secondary array so they will get allocated

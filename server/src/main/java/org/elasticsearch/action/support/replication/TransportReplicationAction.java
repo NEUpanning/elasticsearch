@@ -343,12 +343,12 @@ public abstract class TransportReplicationAction<
                 throw new ShardNotFoundException(shardId, "expected allocation id [{}] with term [{}] but found [{}]",
                     primaryRequest.getTargetAllocationID(), primaryRequest.getPrimaryTerm(), actualTerm);
             }
-
+            // 检查当前是否有阻塞的操作，有的话，就缓存起来，等后面阻塞的操作完成后再执行。阻塞操作：peer recovery中的节点变为relocate状态
             acquirePrimaryOperationPermit(
                     indexShard,
                     primaryRequest.getRequest(),
                     ActionListener.wrap(
-                            releasable -> runWithPrimaryShardReference(new PrimaryShardReference(indexShard, releasable)),
+                            releasable -> runWithPrimaryShardReference(new PrimaryShardReference(indexShard, releasable)),//releasable就是用于释放permit的
                             e -> {
                                 if (e instanceof ShardNotInPrimaryModeException) {
                                     onFailure(new ReplicationOperation.RetryOnPrimaryException(shardId, "shard is not in primary mode", e));
@@ -369,7 +369,7 @@ public abstract class TransportReplicationAction<
                     throw blockException;
                 }
 
-                if (primaryShardReference.isRelocated()) {
+                if (primaryShardReference.isRelocated()) {//检查主分片是否已经迁移完成，如果迁移完成将请求路由给目标节点
                     primaryShardReference.close(); // release shard operation lock as soon as possible
                     setPhase(replicationTask, "primary_delegation");
                     // delegate primary phase to relocation target
@@ -397,7 +397,7 @@ public abstract class TransportReplicationAction<
                         });
                 } else {
                     setPhase(replicationTask, "primary");
-
+                    //写入操作在primary和replica完成时触发
                     final ActionListener<Response> responseListener = ActionListener.wrap(response -> {
                         adaptResponse(response, primaryShardReference.indexShard);
 
@@ -417,9 +417,9 @@ public abstract class TransportReplicationAction<
                             }
                         }
 
-                        primaryShardReference.close(); // release shard operation lock before responding to caller
+                        primaryShardReference.close(); // release shard operation lock before responding to caller 也就是释放operation permit
                         setPhase(replicationTask, "finished");
-                        onCompletionListener.onResponse(response);
+                        onCompletionListener.onResponse(response);//返回结果给协调节点
                     }, e -> handleException(primaryShardReference, e));
 
                     new ReplicationOperation<>(primaryRequest.getRequest(), primaryShardReference,
@@ -644,7 +644,7 @@ public abstract class TransportReplicationAction<
         protected void doRun() throws Exception {
             setPhase(task, "replica");
             final String actualAllocationId = this.replica.routingEntry().allocationId().getId();
-            if (actualAllocationId.equals(replicaRequest.getTargetAllocationID()) == false) {
+            if (actualAllocationId.equals(replicaRequest.getTargetAllocationID()) == false) {//保证当前节点分配的shard是in sync shard。AllocationId用于确定唯一的一次分配的shard
                 throw new ShardNotFoundException(this.replica.shardId(), "expected allocation id [{}] but found [{}]",
                     replicaRequest.getTargetAllocationID(), actualAllocationId);
             }
@@ -737,7 +737,7 @@ public abstract class TransportReplicationAction<
                     "request waitForActiveShards must be set in resolveRequest";
 
                 final ShardRouting primary = state.getRoutingTable().shardRoutingTable(request.shardId()).primaryShard();
-                if (primary == null || primary.active() == false) {
+                if (primary == null || primary.active() == false) {//重试等待primary可用直到超时，比如缺失primary shard就是不可用
                     logger.trace("primary shard [{}] is not yet active, scheduling a retry: action [{}], request [{}], "
                         + "cluster state version [{}]", request.shardId(), actionName, request, state.version());
                     retryBecauseUnavailable(request.shardId(), "primary shard is not active");
@@ -749,7 +749,7 @@ public abstract class TransportReplicationAction<
                     retryBecauseUnavailable(request.shardId(), "primary shard isn't assigned to a known node.");
                     return;
                 }
-                final DiscoveryNode node = state.nodes().get(primary.currentNodeId());
+                final DiscoveryNode node = state.nodes().get(primary.currentNodeId());//主分片所在节点
                 if (primary.currentNodeId().equals(state.nodes().getLocalNodeId())) {
                     performLocalAction(state, primary, node, indexMetadata);
                 } else {
@@ -790,7 +790,7 @@ public abstract class TransportReplicationAction<
             setPhase(task, "rerouted");
             performAction(node, actionName, false, request);
         }
-
+        //用transportService向节点发请求
         private void performAction(final DiscoveryNode node, final String action, final boolean isPrimaryAction,
                                    final TransportRequest requestToPerform) {
             transportService.sendRequest(node, action, requestToPerform, transportOptions, new TransportResponseHandler<Response>() {
@@ -1069,7 +1069,7 @@ public abstract class TransportReplicationAction<
      * if deemed necessary as well as marking it as stale when needed.
      */
     protected class ReplicasProxy implements ReplicationOperation.Replicas<ReplicaRequest> {
-
+        // 主分片上，准备向副本发送indices:data/write/bulk[s][r]，以写副本，从ReplicationOperation.performOnReplica中跳转过来的。
         @Override
         public void performOn(
                 final ShardRouting replica,

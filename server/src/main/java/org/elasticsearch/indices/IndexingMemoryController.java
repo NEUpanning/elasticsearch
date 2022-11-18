@@ -48,7 +48,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-
+// 按照大小控制doc异步刷盘
 public class IndexingMemoryController implements IndexingOperationListener, Closeable {
 
     private static final Logger logger = LogManager.getLogger(IndexingMemoryController.class);

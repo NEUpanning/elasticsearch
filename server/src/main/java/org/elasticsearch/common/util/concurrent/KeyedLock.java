@@ -103,7 +103,7 @@ public final class KeyedLock<T> {
 
     private ReleasableLock tryCreateNewLock(T key) {
         KeyLock newLock = new KeyLock(fair);
-        newLock.lock();
+        newLock.lock(); //该方法被调用是在外层想要对key aquaire锁时，所以这里需要获取锁
         KeyLock keyLock = map.putIfAbsent(key, newLock);
         if (keyLock == null) {
             return new ReleasableLock(key, newLock);

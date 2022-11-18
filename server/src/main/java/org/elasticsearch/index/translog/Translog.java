@@ -524,7 +524,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         try {
             final long start = out.position();
             out.skip(Integer.BYTES);
-            writeOperationNoSize(new BufferedChecksumStreamOutput(out), operation);
+            writeOperationNoSize(new BufferedChecksumStreamOutput(out), operation); // 将write operation写入out
             final long end = out.position();
             final int operationSize = (int) (end - Integer.BYTES - start);
             out.seek(start);
@@ -540,7 +540,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                     throw new IllegalArgumentException("Operation term is newer than the current term; "
                         + "current term[" + current.getPrimaryTerm() + "], operation term[" + operation + "]");
                 }
-                return current.add(bytes, operation.seqNo());
+                return current.add(bytes, operation.seqNo());// 将doc source和seq no写入文件
             }
         } catch (final AlreadyClosedException | IOException ex) {
             closeOnTragicEvent(ex);
@@ -1495,11 +1495,11 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
     public enum Durability {
 
         /**
-         * Async durability - translogs are synced based on a time interval.
+         * Async durability - translogs are synced based on a time interval.按时间sync translog
          */
         ASYNC,
         /**
-         * Request durability - translogs are synced for each high level request (bulk, index, delete)
+         * Request durability - translogs are synced for each high level request (bulk, index, delete)每个请求等到translog sync才会ack，请求执行就会sync
          */
         REQUEST
 

@@ -77,13 +77,13 @@ public abstract class PrimaryShardAllocator extends BaseGatewayShardAllocator {
     public AllocateUnassignedDecision makeAllocationDecision(final ShardRouting unassignedShard,
                                                              final RoutingAllocation allocation,
                                                              final Logger logger) {
-        if (isResponsibleFor(unassignedShard) == false) {
+        if (isResponsibleFor(unassignedShard) == false) {// 这个allocator是否对这个shard分配负责
             // this allocator is not responsible for allocating this shard
             return AllocateUnassignedDecision.NOT_TAKEN;
         }
 
         final boolean explain = allocation.debugDecision();
-        final FetchResult<NodeGatewayStartedShards> shardState = fetchData(unassignedShard, allocation);
+        final FetchResult<NodeGatewayStartedShards> shardState = fetchData(unassignedShard, allocation);// 获取在各个节点拉取shard 元数据的结果。NodeGatewayStartedShards是对应节点的结果数据
         if (shardState.hasData() == false) {
             allocation.setHasPendingAsyncFetch();
             List<NodeAllocationResult> nodeDecisions = null;
@@ -235,7 +235,7 @@ public abstract class PrimaryShardAllocator extends BaseGatewayShardAllocator {
         List<NodeGatewayStartedShards> nodeShardStates = new ArrayList<>();
         int numberOfAllocationsFound = 0;
         for (NodeGatewayStartedShards nodeShardState : shardState.getData().values()) {
-            DiscoveryNode node = nodeShardState.getNode();
+            DiscoveryNode node = nodeShardState.getNode();// 使用了value中的discovery node
             String allocationId = nodeShardState.allocationId();
 
             if (ignoreNodes.contains(node.getId())) {
@@ -268,7 +268,7 @@ public abstract class PrimaryShardAllocator extends BaseGatewayShardAllocator {
                     "only allow store that can be opened or that throws a ShardLockObtainFailedException while being opened but got a " +
                         "store throwing " + nodeShardState.storeException();
                 numberOfAllocationsFound++;
-                if (matchAnyShard || inSyncAllocationIds.contains(nodeShardState.allocationId())) {
+                if (matchAnyShard || inSyncAllocationIds.contains(nodeShardState.allocationId())) {// 这个shard是in sync shard中的，或者当前配置了不考虑shard数据是否最新
                     nodeShardStates.add(nodeShardState);
                 }
             }
