@@ -119,7 +119,7 @@ public class TransportNodesListShardStoreMetadata extends TransportNodesAction<T
             throw new ElasticsearchException("Failed to list store metadata for shard [" + request.shardId + "]", e);
         }
     }
-
+    //从内存或者磁盘获取StoreFilesMetadata
     private StoreFilesMetadata listStoreMetadata(NodeRequest request) throws IOException {
         final ShardId shardId = request.getShardId();
         logger.trace("listing store meta data for {}", shardId);

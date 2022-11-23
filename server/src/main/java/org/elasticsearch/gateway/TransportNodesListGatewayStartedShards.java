@@ -118,7 +118,7 @@ public class TransportNodesListGatewayStartedShards extends
             final ShardId shardId = request.getShardId();
             logger.trace("{} loading local shard state info", shardId);
             ShardStateMetadata shardStateMetadata = ShardStateMetadata.FORMAT.loadLatestState(logger, namedXContentRegistry,
-                nodeEnv.availableShardPaths(request.shardId));
+                nodeEnv.availableShardPaths(request.shardId));// 分片级别元数据
             if (shardStateMetadata != null) {
                 if (indicesService.getShardOrNull(shardId) == null) {
                     final String customDataPath;

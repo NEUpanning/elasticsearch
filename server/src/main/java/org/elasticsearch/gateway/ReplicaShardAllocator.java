@@ -149,7 +149,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
         final RoutingNodes routingNodes = allocation.routingNodes();
         final boolean explain = allocation.debugDecision();
         // pre-check if it can be allocated to any node that currently exists, so we won't list the store for it for nothing
-        Tuple<Decision, Map<String, NodeAllocationResult>> result = canBeAllocatedToAtLeastOneNode(unassignedShard, allocation);
+        Tuple<Decision, Map<String, NodeAllocationResult>> result = canBeAllocatedToAtLeastOneNode(unassignedShard, allocation);//根据decider确定是否可以分配
         Decision allocateDecision = result.v1();
         if (allocateDecision.type() != Decision.Type.YES
                 && (explain == false || hasInitiatedFetching(unassignedShard) == false)) {
@@ -180,7 +180,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
         }
         assert primaryShard.currentNodeId() != null;
         final DiscoveryNode primaryNode = allocation.nodes().get(primaryShard.currentNodeId());
-        final TransportNodesListShardStoreMetadata.StoreFilesMetadata primaryStore = findStore(primaryNode, shardStores);
+        final TransportNodesListShardStoreMetadata.StoreFilesMetadata primaryStore = findStore(primaryNode, shardStores);//prmary的StoreFilesMetadata
         if (primaryStore == null) {
             // if we can't find the primary data, it is probably because the primary shard is corrupted (and listing failed)
             // we want to let the replica be allocated in order to expose the actual problem with the primary that the replica
@@ -197,7 +197,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
         List<NodeAllocationResult> nodeDecisions = augmentExplanationsWithStoreInfo(result.v2(), matchingNodes.nodeDecisions);
         if (allocateDecision.type() != Decision.Type.YES) {
             return AllocateUnassignedDecision.no(UnassignedInfo.AllocationStatus.fromDecision(allocateDecision.type()), nodeDecisions);
-        } else if (matchingNodes.getNodeWithHighestMatch() != null) {
+        } else if (matchingNodes.getNodeWithHighestMatch() != null) {//最匹配的节点的排序方式是无需回放操作 retenton lease的seq No较大（意味着需要回放的操作少） 相同的文件大小较大
             RoutingNode nodeWithHighestMatch = allocation.routingNodes().node(matchingNodes.getNodeWithHighestMatch().getId());
             // we only check on THROTTLE since we checked before before on NO
             Decision decision = allocation.deciders().canAllocate(unassignedShard, nodeWithHighestMatch, allocation);
@@ -210,9 +210,9 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
                 logger.debug("[{}][{}]: allocating [{}] to [{}] in order to reuse its unallocated persistent store",
                     unassignedShard.index(), unassignedShard.id(), unassignedShard, nodeWithHighestMatch.node());
                 // we found a match
-                return AllocateUnassignedDecision.yes(nodeWithHighestMatch.node(), null, nodeDecisions, true);
+                return AllocateUnassignedDecision.yes(nodeWithHighestMatch.node(), null, nodeDecisions, true);// 返回最匹配节点的决定
             }
-        } else if (matchingNodes.hasAnyData() == false && unassignedShard.unassignedInfo().isDelayed()) {
+        } else if (matchingNodes.hasAnyData() == false && unassignedShard.unassignedInfo().isDelayed()) {//节点无数据则延迟分配
             // if we didn't manage to find *any* data (regardless of matching sizes), and the replica is
             // unassigned due to a node leaving, so we delay allocation of this replica to see if the
             // node with the shard copy will rejoin so we can re-use the copy it has
@@ -341,7 +341,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
             }
 
             if (matchingNode == null) {
-                matchingNode = computeMatchingNode(primaryNode, primaryStore, discoNode, storeFilesMetadata);
+                matchingNode = computeMatchingNode(primaryNode, primaryStore, discoNode, storeFilesMetadata);//每个shard copy节点计算相同文件的大小和is noop recovery(不是从primary恢复的副本为false)
             }
             matchingNodes.put(discoNode, matchingNode);
             if (logger.isTraceEnabled()) {
@@ -365,7 +365,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
         long sizeMatched = 0;
         for (StoreFileMetadata storeFileMetadata : storeFilesMetadata) {
             String metadataFileName = storeFileMetadata.name();
-            if (primaryStore.fileExists(metadataFileName) && primaryStore.file(metadataFileName).isSame(storeFileMetadata)) {
+            if (primaryStore.fileExists(metadataFileName) && primaryStore.file(metadataFileName).isSame(storeFileMetadata)) {//根据文件的checksum比较是否相同
                 sizeMatched += storeFileMetadata.length();
             }
         }
@@ -384,8 +384,8 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
         final long retainingSeqNoForPrimary = primaryStore.getPeerRecoveryRetentionLeaseRetainingSeqNo(primaryNode);
         final long retainingSeqNoForReplica = primaryStore.getPeerRecoveryRetentionLeaseRetainingSeqNo(replicaNode);
         final boolean isNoopRecovery = (retainingSeqNoForReplica >= retainingSeqNoForPrimary && retainingSeqNoForPrimary >= 0)
-            || hasMatchingSyncId(primaryStore, replicaStore);
-        final long matchingBytes = computeMatchingBytes(primaryStore, replicaStore);
+            || hasMatchingSyncId(primaryStore, replicaStore);//true代表replica是最新数据
+        final long matchingBytes = computeMatchingBytes(primaryStore, replicaStore);//计算主和副相同文件的总大小
         return new MatchingNode(matchingBytes, retainingSeqNoForReplica, isNoopRecovery);
     }
 

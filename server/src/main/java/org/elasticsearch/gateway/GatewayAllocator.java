@@ -62,9 +62,9 @@ public class GatewayAllocator implements ExistingShardsAllocator {
     private final ReplicaShardAllocator replicaShardAllocator;
 
     private final ConcurrentMap<ShardId, AsyncShardFetch<TransportNodesListGatewayStartedShards.NodeGatewayStartedShards>>
-        asyncFetchStarted = ConcurrentCollections.newConcurrentMap();
+        asyncFetchStarted = ConcurrentCollections.newConcurrentMap();//存储primary的返回结果
     private final ConcurrentMap<ShardId, AsyncShardFetch<TransportNodesListShardStoreMetadata.NodeStoreFilesMetadata>>
-        asyncFetchStore = ConcurrentCollections.newConcurrentMap();
+        asyncFetchStore = ConcurrentCollections.newConcurrentMap();//存储replica的返回结果
     private Set<String> lastSeenEphemeralIds = Collections.emptySet();
 
     @Inject
@@ -236,7 +236,7 @@ public class GatewayAllocator implements ExistingShardsAllocator {
         protected AsyncShardFetch.FetchResult<TransportNodesListGatewayStartedShards.NodeGatewayStartedShards>
                                                                         fetchData(ShardRouting shard, RoutingAllocation allocation) {
             AsyncShardFetch<TransportNodesListGatewayStartedShards.NodeGatewayStartedShards> fetch =
-                asyncFetchStarted.computeIfAbsent(shard.shardId(),
+                asyncFetchStarted.computeIfAbsent(shard.shardId(), //每个分片组一个InternalAsyncFetch
                     shardId -> new InternalAsyncFetch<>(logger, "shard_started", shardId,
                         IndexMetadata.INDEX_DATA_PATH_SETTING.get(allocation.metadata().index(shard.index()).getSettings()),
                         startedAction));// 保存新启动的fetch。fetch为新创建的AsyncShardFetch或者是旧的AsyncShardFetch
@@ -260,7 +260,7 @@ public class GatewayAllocator implements ExistingShardsAllocator {
 
         @Override
         protected AsyncShardFetch.FetchResult<TransportNodesListShardStoreMetadata.NodeStoreFilesMetadata>
-                                                                        fetchData(ShardRouting shard, RoutingAllocation allocation) {
+                                                                        fetchData(ShardRouting shard, RoutingAllocation allocation) {//副本也需要从数据节点拉元数据，数据类型不同
             AsyncShardFetch<TransportNodesListShardStoreMetadata.NodeStoreFilesMetadata> fetch =
                 asyncFetchStore.computeIfAbsent(shard.shardId(),
                     shardId -> new InternalAsyncFetch<>(logger, "shard_store", shard.shardId(),

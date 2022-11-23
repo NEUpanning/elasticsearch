@@ -450,7 +450,7 @@ public class AllocationService {
         }
 
         final RoutingNodes.UnassignedShards.UnassignedIterator replicaIterator = allocation.routingNodes().unassigned().iterator();
-        while (replicaIterator.hasNext()) {
+        while (replicaIterator.hasNext()) {//由于有当primary没分配时replica禁止分配的decider，所以这里在primary分配后才会分配
             final ShardRouting shardRouting = replicaIterator.next();
             if (shardRouting.primary() == false) {// 遍历所有replica
                 getAllocatorForShard(shardRouting, allocation).allocateUnassigned(shardRouting, allocation, replicaIterator);
