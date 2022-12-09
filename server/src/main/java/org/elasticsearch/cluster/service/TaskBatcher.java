@@ -58,18 +58,18 @@ public abstract class TaskBatcher {
             return;
         }
         final BatchedTask firstTask = tasks.get(0);
-        assert tasks.stream().allMatch(t -> t.batchingKey == firstTask.batchingKey) :
+        assert tasks.stream().allMatch(t -> t.batchingKey == firstTask.batchingKey) ://同一批提交的任务的batchingKey必须相同，这些任务会被批量执行
             "tasks submitted in a batch should share the same batching key: " + tasks;
         // convert to an identity map to check for dups based on task identity
         final Map<Object, BatchedTask> tasksIdentity = tasks.stream().collect(Collectors.toMap(
             BatchedTask::getTask,
-            Function.identity(),
-            (a, b) -> { throw new IllegalStateException("cannot add duplicate task: " + a); },
+            Function.identity(),//该方法返回参数
+            (a, b) -> { throw new IllegalStateException("cannot add duplicate task: " + a); },//不可能有重复的task
             IdentityHashMap::new));
 
         synchronized (tasksPerBatchingKey) {
             LinkedHashSet<BatchedTask> existingTasks = tasksPerBatchingKey.computeIfAbsent(firstTask.batchingKey,
-                k -> new LinkedHashSet<>(tasks.size()));
+                k -> new LinkedHashSet<>(tasks.size()));//按task的key放到map
             for (BatchedTask existing : existingTasks) {
                 // check that there won't be two tasks with the same identity for the same batching key
                 BatchedTask duplicateTask = tasksIdentity.get(existing.getTask());
@@ -84,7 +84,7 @@ public abstract class TaskBatcher {
         if (timeout != null) {
             threadExecutor.execute(firstTask, timeout, () -> onTimeoutInternal(tasks, timeout));
         } else {
-            threadExecutor.execute(firstTask);
+            threadExecutor.execute(firstTask);//master的线程池执行。虽然只传了firstTask，但后面会根据BatchingKey批量执行任务
         }
     }
 
@@ -127,12 +127,12 @@ public abstract class TaskBatcher {
             final List<BatchedTask> toExecute = new ArrayList<>();
             final Map<String, List<BatchedTask>> processTasksBySource = new HashMap<>();
             synchronized (tasksPerBatchingKey) {
-                LinkedHashSet<BatchedTask> pending = tasksPerBatchingKey.remove(updateTask.batchingKey);
+                LinkedHashSet<BatchedTask> pending = tasksPerBatchingKey.remove(updateTask.batchingKey);//同一个key的task
                 if (pending != null) {
                     for (BatchedTask task : pending) {
                         if (task.processed.getAndSet(true) == false) {
                             logger.trace("will process {}", task);
-                            toExecute.add(task);
+                            toExecute.add(task);//同一个key的task一起执行
                             processTasksBySource.computeIfAbsent(task.source, s -> new ArrayList<>()).add(task);
                         } else {
                             logger.trace("skipping {}, already processed", task);
@@ -185,7 +185,7 @@ public abstract class TaskBatcher {
 
         @Override
         public void run() {
-            runIfNotProcessed(this);
+            runIfNotProcessed(this);// updateTask的run方法
         }
 
         @Override

@@ -271,13 +271,13 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
         synchronized (mutex) {
             logger.trace("handleApplyCommit: applying commit {}", applyCommitRequest);
 
-            coordinationState.get().handleCommit(applyCommitRequest);
+            coordinationState.get().handleCommit(applyCommitRequest);//处理request，可能不会做什么
             final ClusterState committedState = hideStateIfNotRecovered(coordinationState.get().getLastAcceptedState());
             applierState = mode == Mode.CANDIDATE ? clusterStateWithNoMasterBlock(committedState) : committedState;
             if (applyCommitRequest.getSourceNode().equals(getLocalNode())) {
                 // master node applies the committed state at the end of the publication process, not here.
                 applyListener.onResponse(null);
-            } else {
+            } else {//节点应用集群状态，调用受影响的applier和listener
                 clusterApplier.onNewClusterState(applyCommitRequest.toString(), () -> applierState,
                     new ClusterApplyListener() {
 
@@ -1105,12 +1105,12 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
 
                 final PublishRequest publishRequest = coordinationState.get().handleClientValue(clusterState);
                 final CoordinatorPublication publication = new CoordinatorPublication(publishRequest, publicationContext,
-                    new ListenableFuture<>(), ackListener, publishListener);
+                    new ListenableFuture<>(), ackListener, publishListener);//CoordinatorPublication实例的创建，就开始超时计时
                 currentPublication = Optional.of(publication);
 
-                final DiscoveryNodes publishNodes = publishRequest.getAcceptedState().nodes();
-                leaderChecker.setCurrentNodes(publishNodes);
-                followersChecker.setCurrentNodes(publishNodes);
+                final DiscoveryNodes publishNodes = publishRequest.getAcceptedState().nodes();//publish的节点取的是要publish的cluster state中的节点列表
+                leaderChecker.setCurrentNodes(publishNodes);//更新leaderChecker节点列表
+                followersChecker.setCurrentNodes(publishNodes);//更新followersChecker节点列表，check下新加入的节点
                 lagDetector.setTrackedNodes(publishNodes);
                 publication.start(followersChecker.getFaultyNodes());
             }
@@ -1293,8 +1293,8 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
         private final PublicationTransportHandler.PublicationContext publicationContext;
 
         @Nullable // if using single-node discovery
-        private final Scheduler.ScheduledCancellable timeoutHandler;
-        private final Scheduler.Cancellable infoTimeoutHandler;
+        private final Scheduler.ScheduledCancellable timeoutHandler;//apply commit request 响应超时时间30s,超时直接结束
+        private final Scheduler.Cancellable infoTimeoutHandler; //publish request 响应超时时间10s的info日志
 
         // We may not have accepted our own state before receiving a join from another node, causing its join to be rejected (we cannot
         // safely accept a join whose last-accepted term/version is ahead of ours), so store them up and process them at the end.
@@ -1314,17 +1314,17 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                     public void onNodeAck(DiscoveryNode node, Exception e) {
                         // acking and cluster state application for local node is handled specially
                         if (node.equals(getLocalNode())) {
-                            synchronized (mutex) {
+                            synchronized (mutex) {//如果是本地节点（master），localNodeAckEvent标记为done并success
                                 if (e == null) {
                                     localNodeAckEvent.onResponse(null);
                                 } else {
-                                    localNodeAckEvent.onFailure(e);
+                                    localNodeAckEvent.onFailure(e);// 失败的情况localNodeAckEvent标记done并且失败
                                 }
                             }
                         } else {
                             ackListener.onNodeAck(node, e);
                             if (e == null) {
-                                lagDetector.setAppliedVersion(node, publishRequest.getAcceptedState().version());
+                                lagDetector.setAppliedVersion(node, publishRequest.getAcceptedState().version());//如果不是本地节点，更新state记录的版本
                             }
                         }
                     }
@@ -1387,7 +1387,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
         protected void onCompletion(boolean committed) {
             assert Thread.holdsLock(mutex) : "Coordinator mutex not held";
 
-            localNodeAckEvent.addListener(new ActionListener<Void>() {
+            localNodeAckEvent.addListener(new ActionListener<Void>() {//如果是从apply commit阶段到这里，由于之前已经标记localNodeAckEvent为done了，所以listener会直接执行。如果是在publish阶段就超时则不会，因为localNodeAckEvent被标记为失败
                 @Override
                 public void onResponse(Void ignore) {
                     assert Thread.holdsLock(mutex) : "Coordinator mutex not held";
@@ -1397,7 +1397,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                     assert receivedJoinsProcessed == false;
                     receivedJoinsProcessed = true;
 
-                    clusterApplier.onNewClusterState(CoordinatorPublication.this.toString(), () -> applierState,
+                    clusterApplier.onNewClusterState(CoordinatorPublication.this.toString(), () -> applierState,//master节点触发clusterApplierService
                         new ClusterApplyListener() {
                             @Override
                             public void onFailure(String source, Exception e) {
@@ -1422,7 +1422,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                                         // if necessary, abdicate to another node or improve the voting configuration
                                         boolean attemptReconfiguration = true;
                                         final ClusterState state = getLastAcceptedState(); // committed state
-                                        if (localNodeMayWinElection(state) == false) {
+                                        if (localNodeMayWinElection(state) == false) {//非选举流程不会走
                                             final List<DiscoveryNode> masterCandidates = completedNodes().stream()
                                                 .filter(DiscoveryNode::isMasterNode)
                                                 .filter(node -> nodeMayWinElection(state, node))
@@ -1445,13 +1445,13 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                                             }
                                         }
                                         if (attemptReconfiguration) {
-                                            scheduleReconfigurationIfNeeded();
+                                            scheduleReconfigurationIfNeeded();//如果有必要则修改voting configuration
                                         }
                                     }
-                                    lagDetector.startLagDetector(publishRequest.getAcceptedState().version());
+                                    lagDetector.startLagDetector(publishRequest.getAcceptedState().version());//master开始开启监控，超时90s，检查哪些数据节点的集群版本低于当前值，若低于的话，直接从被master从集群剔除
                                     logIncompleteNodes(Level.WARN);
                                 }
-                                cancelTimeoutHandlers();
+                                cancelTimeoutHandlers();//取消监控超时的handler
                                 ackListener.onNodeAck(getLocalNode(), null);
                                 publishListener.onResponse(null);
                             }

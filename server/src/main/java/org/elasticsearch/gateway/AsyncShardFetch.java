@@ -123,7 +123,7 @@ public abstract class AsyncShardFetch<T extends BaseNodeResponse> implements Rel
             // use a unique round id to detect stale responses in processAsyncFetch
             final long fetchingRound = round.incrementAndGet();
             for (NodeEntry<T> nodeEntry : nodesToFetch) {
-                nodeEntry.markAsFetching(fetchingRound);// 标记为fetching
+                nodeEntry.markAsFetching(fetchingRound);// 标记为fetching 并标记fetchingRound
             }
             DiscoveryNode[] discoNodesToFetch = nodesToFetch.stream().map(NodeEntry::getNodeId).map(nodes::get)
                 .toArray(DiscoveryNode[]::new);
@@ -187,14 +187,14 @@ public abstract class AsyncShardFetch<T extends BaseNodeResponse> implements Rel
             for (T response : responses) {
                 NodeEntry<T> nodeEntry = cache.get(response.getNode().getId());
                 if (nodeEntry != null) {
-                    if (nodeEntry.getFetchingRound() != fetchingRound) {
+                    if (nodeEntry.getFetchingRound() != fetchingRound) {//只有可能是旧的fetch返回了
                         assert nodeEntry.getFetchingRound() > fetchingRound : "node entries only replaced by newer rounds";
                         logger.trace("{} received response for [{}] from node {} for an older fetching round (expected: {} but was: {})",
                             shardId, nodeEntry.getNodeId(), type, nodeEntry.getFetchingRound(), fetchingRound);
                     } else if (nodeEntry.isFailed()) {
                         logger.trace("{} node {} has failed for [{}] (failure [{}])", shardId, nodeEntry.getNodeId(), type,
                             nodeEntry.getFailure());
-                    } else {
+                    } else {//是当前的fetchingRound且返回成功
                         // if the entry is there, for the right fetching round and not marked as failed already, process it
                         logger.trace("{} marking {} as done for [{}], result is [{}]", shardId, nodeEntry.getNodeId(), type, response);
                         nodeEntry.doneFetching(response);// response保存，状态置位

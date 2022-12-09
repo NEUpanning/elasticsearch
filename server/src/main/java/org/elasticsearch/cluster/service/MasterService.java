@@ -79,10 +79,10 @@ public class MasterService extends AbstractLifecycleComponent {
 
     static final String MASTER_UPDATE_THREAD_NAME = "masterService#updateTask";
 
-    ClusterStatePublisher clusterStatePublisher;
+    ClusterStatePublisher clusterStatePublisher;//dicovery层实现
 
     private final String nodeName;
-
+    //从dicovery层获取，一般是Coordinator
     private java.util.function.Supplier<ClusterState> clusterStateSupplier;
 
     private volatile TimeValue slowTaskLoggingThreshold;
@@ -146,8 +146,8 @@ public class MasterService extends AbstractLifecycleComponent {
 
         @Override
         protected void run(Object batchingKey, List<? extends BatchedTask> tasks, String tasksSummary) {
-            ClusterStateTaskExecutor<Object> taskExecutor = (ClusterStateTaskExecutor<Object>) batchingKey;
-            List<UpdateTask> updateTasks = (List<UpdateTask>) tasks;
+            ClusterStateTaskExecutor<Object> taskExecutor = (ClusterStateTaskExecutor<Object>) batchingKey;//用于处理对应影响集群状态任务
+            List<UpdateTask> updateTasks = (List<UpdateTask>) tasks;//影响集群状态的任务
             runTasks(new TaskInputs(taskExecutor, updateTasks, tasksSummary));
         }
 
@@ -198,7 +198,7 @@ public class MasterService extends AbstractLifecycleComponent {
             "Expected current thread [" + Thread.currentThread() + "] to not be the master service thread. Reason: [" + reason + "]";
         return true;
     }
-
+    //TaskInputs中有一个或多个task
     private void runTasks(TaskInputs taskInputs) {
         final String summary = taskInputs.summary;
         if (!lifecycle.started()) {
@@ -208,7 +208,7 @@ public class MasterService extends AbstractLifecycleComponent {
 
         logger.debug("executing cluster state update for [{}]", summary);
         final ClusterState previousClusterState = state();
-
+        //如果当前节点不再是master则结束
         if (!previousClusterState.nodes().isLocalNodeElectedMaster() && taskInputs.runOnlyWhenMaster()) {
             logger.debug("failing [{}]: local node is no longer master", summary);
             taskInputs.onNoLongerMaster();
@@ -216,8 +216,8 @@ public class MasterService extends AbstractLifecycleComponent {
         }
 
         final long computationStartTime = threadPool.relativeTimeInMillis();
-        final TaskOutputs taskOutputs = calculateTaskOutputs(taskInputs, previousClusterState);
-        taskOutputs.notifyFailedTasks();
+        final TaskOutputs taskOutputs = calculateTaskOutputs(taskInputs, previousClusterState);//根据当前集群状态和task计算出结果,结果包含新的集群状态和task执行是否失败
+        taskOutputs.notifyFailedTasks();//触发失败任务的listener
         final TimeValue computationTime = getTimeSince(computationStartTime);
         logExecutionTime(computationTime, "compute cluster state update", summary);
 
@@ -232,7 +232,7 @@ public class MasterService extends AbstractLifecycleComponent {
                 logger.trace("cluster state updated, source [{}]\n{}", summary, newClusterState);
             } else {
                 logger.debug("cluster state updated, version [{}], source [{}]", newClusterState.version(), summary);
-            }
+            }//开始publish cluster state
             final long publicationStartTime = threadPool.relativeTimeInMillis();
             try {
                 ClusterChangedEvent clusterChangedEvent = new ClusterChangedEvent(summary, newClusterState, previousClusterState);
@@ -240,14 +240,14 @@ public class MasterService extends AbstractLifecycleComponent {
                 final DiscoveryNodes.Delta nodesDelta = clusterChangedEvent.nodesDelta();
                 if (nodesDelta.hasChanges() && logger.isInfoEnabled()) {
                     String nodesDeltaSummary = nodesDelta.shortSummary();
-                    if (nodesDeltaSummary.length() > 0) {
+                    if (nodesDeltaSummary.length() > 0) {//节点加入或离开打印日志
                         logger.info("{}, term: {}, version: {}, delta: {}",
                             summary, newClusterState.term(), newClusterState.version(), nodesDeltaSummary);
                     }
                 }
 
                 logger.debug("publishing cluster state version [{}]", newClusterState.version());
-                publish(clusterChangedEvent, taskOutputs, publicationStartTime);
+                publish(clusterChangedEvent, taskOutputs, publicationStartTime);//开始publish cluster state
             } catch (Exception e) {
                 handleException(summary, publicationStartTime, newClusterState, e);
             }
@@ -698,8 +698,8 @@ public class MasterService extends AbstractLifecycleComponent {
     private ClusterTasksResult<Object> executeTasks(TaskInputs taskInputs, ClusterState previousClusterState) {
         ClusterTasksResult<Object> clusterTasksResult;
         try {
-            List<Object> inputs = taskInputs.updateTasks.stream().map(tUpdateTask -> tUpdateTask.task).collect(Collectors.toList());
-            clusterTasksResult = taskInputs.executor.execute(previousClusterState, inputs);
+            List<Object> inputs = taskInputs.updateTasks.stream().map(tUpdateTask -> tUpdateTask.task).collect(Collectors.toList());//具体的task
+            clusterTasksResult = taskInputs.executor.execute(previousClusterState, inputs);//使用task对应的executor（ClusterStateTaskExecutor）计算结果,结果包含新的集群状态
             if (previousClusterState != clusterTasksResult.resultingState &&
                 previousClusterState.nodes().isLocalNodeElectedMaster() &&
                 (clusterTasksResult.resultingState.nodes().isLocalNodeElectedMaster() == false)) {
@@ -795,7 +795,7 @@ public class MasterService extends AbstractLifecycleComponent {
             List<Batcher.UpdateTask> safeTasks = tasks.entrySet().stream()
                 .map(e -> taskBatcher.new UpdateTask(config.priority(), source, e.getKey(), safe(e.getValue(), supplier), executor))
                 .collect(Collectors.toList());
-            taskBatcher.submitTasks(safeTasks, config.timeout());
+            taskBatcher.submitTasks(safeTasks, config.timeout());//提交任务到线程池执行
         } catch (EsRejectedExecutionException e) {
             // ignore cases where we are shutting down..., there is really nothing interesting
             // to be done here...

@@ -70,7 +70,7 @@ public abstract class Publication {
             onFaultyNode(faultyNode);
         }
         onPossibleCommitFailure();
-        publicationTargets.forEach(PublicationTarget::sendPublishRequest);
+        publicationTargets.forEach(PublicationTarget::sendPublishRequest);//向其他节点发送publish请求
     }
 
     public void cancel(String reason) {
@@ -84,7 +84,7 @@ public abstract class Publication {
             logger.debug("cancel: [{}] cancelled before committing (reason: {})", this, reason);
             // fail all current publications
             final Exception e = new ElasticsearchException("publication cancelled before committing: " + reason);
-            publicationTargets.stream().filter(PublicationTarget::isActive).forEach(pt -> pt.setFailed(e));
+            publicationTargets.stream().filter(PublicationTarget::isActive).forEach(pt -> pt.setFailed(e));//publication流程的目标节点状态均置位失败
         }
         onPossibleCompletion();
     }
@@ -106,19 +106,19 @@ public abstract class Publication {
     }
 
     private void onPossibleCompletion() {
-        if (isCompleted) {
+        if (isCompleted) {//如果应完成则直接返回
             return;
         }
 
-        if (cancelled == false) {
+        if (cancelled == false) {//如果已经超时，则直接跳过判断
             for (final PublicationTarget target : publicationTargets) {
-                if (target.isActive()) {
+                if (target.isActive()) {//判断taget node是否回复apply commit request或超时。全部结束才会继续
                     return;
                 }
             }
         }
 
-        if (applyCommitRequest.isPresent() == false) {
+        if (applyCommitRequest.isPresent() == false) {//如果没到commit阶段因超时结束会走这里
             logger.debug("onPossibleCompletion: [{}] commit failed", this);
             assert isCompleted == false;
             isCompleted = true;
@@ -207,12 +207,12 @@ public abstract class Publication {
     }
 
     enum PublicationTargetState {
-        NOT_STARTED,
-        FAILED,
-        SENT_PUBLISH_REQUEST,
-        WAITING_FOR_QUORUM,
-        SENT_APPLY_COMMIT,
-        APPLIED_COMMIT,
+        NOT_STARTED,  // 对象初始化时的状态
+        FAILED,  //该目标节点的publish失败了，比如超时，或者节点异常等
+        SENT_PUBLISH_REQUEST,  // master已经向数据节点发送了第一次的publish_request
+        WAITING_FOR_QUORUM,  // 数据节点已经响应了master,但是master在等待第二次commit的条件
+        SENT_APPLY_COMMIT, // master已经向数据节点发送了commit请求
+        APPLIED_COMMIT,  //  master收到了数据节点对commit请求的响应
     }
 
     class PublicationTarget {
@@ -253,12 +253,12 @@ public abstract class Publication {
             if (applyCommitRequest.isPresent()) {
                 sendApplyCommit();
             } else {
-                try {
+                try {//如果确认publish的节点符合Quorum数量，发送ApplyCommitRequest。否则什么都不做
                     Publication.this.handlePublishResponse(discoveryNode, publishResponse).ifPresent(applyCommit -> {
                         assert applyCommitRequest.isPresent() == false;
-                        applyCommitRequest = Optional.of(applyCommit);
+                        applyCommitRequest = Optional.of(applyCommit);//标记集群状态被commit了
                         ackListener.onCommit(TimeValue.timeValueMillis(currentTimeSupplier.getAsLong() - startTime));
-                        publicationTargets.stream().filter(PublicationTarget::isWaitingForQuorum)
+                        publicationTargets.stream().filter(PublicationTarget::isWaitingForQuorum)//需要节点状态为WAITING_FOR_QUORUM。因此不会重复发送
                             .forEach(PublicationTarget::sendApplyCommit);
                     });
                 } catch (Exception e) {
@@ -278,7 +278,7 @@ public abstract class Publication {
 
         void setAppliedCommit() {
             assert state == PublicationTargetState.SENT_APPLY_COMMIT : state + " -> " + PublicationTargetState.APPLIED_COMMIT;
-            state = PublicationTargetState.APPLIED_COMMIT;
+            state = PublicationTargetState.APPLIED_COMMIT;//状态置位
             ackOnce(null);
         }
 
@@ -380,7 +380,7 @@ public abstract class Publication {
                         discoveryNode);
                     return;
                 }
-                setAppliedCommit();
+                setAppliedCommit();//master标记localNodeAckEvent为done，其他节点记录下cluster state的版本
                 onPossibleCompletion();
                 assert publicationCompletedIffAllTargetsInactiveOrCancelled();
             }

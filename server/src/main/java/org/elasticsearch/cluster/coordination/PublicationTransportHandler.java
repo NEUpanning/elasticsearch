@@ -308,7 +308,7 @@ public class PublicationTransportHandler {
             assert publishRequest.getAcceptedState() == newState : "state got switched on us";
             assert transportService.getThreadPool().getThreadContext().isSystemContext();
             final ActionListener<PublishWithJoinResponse> responseActionListener;
-            if (destination.equals(discoveryNodes.getLocalNode())) {
+            if (destination.equals(discoveryNodes.getLocalNode())) {//publish到本地的情况
                 // if publishing to self, use original request instead (see currentPublishRequestToSelf for explanation)
                 final PublishRequest previousRequest = currentPublishRequestToSelf.getAndSet(publishRequest);
                 // we might override an in-flight publication to self in case where we failed as master and became master again,
@@ -332,10 +332,10 @@ public class PublicationTransportHandler {
             }
             if (sendFullVersion || previousState.nodes().nodeExists(destination) == false) {
                 logger.trace("sending full cluster state version [{}] to [{}]", newState.version(), destination);
-                sendFullClusterState(destination, responseActionListener);
+                sendFullClusterState(destination, responseActionListener);//新节点或者关闭了持久化state发送全量cluster state
             } else {
                 logger.trace("sending cluster state diff for version [{}] to [{}]", newState.version(), destination);
-                sendClusterStateDiff(destination, responseActionListener);
+                sendClusterStateDiff(destination, responseActionListener);//发送增量cluster state
             }
         }
 
@@ -447,7 +447,7 @@ public class PublicationTransportHandler {
                     actionName = PUBLISH_STATE_ACTION_NAME;
                     transportResponseHandler = responseHandler;
                 }
-                transportService.sendRequest(destination, actionName, request, stateRequestOptions, transportResponseHandler);
+                transportService.sendRequest(destination, actionName, request, stateRequestOptions, transportResponseHandler);//调用传输层发送请求
             } catch (Exception e) {
                 logger.warn(() -> new ParameterizedMessage("error sending cluster state to {}", destination), e);
                 listener.onFailure(e);

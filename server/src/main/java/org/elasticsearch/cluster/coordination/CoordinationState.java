@@ -354,7 +354,7 @@ public class CoordinationState {
 
         logger.trace("handlePublishRequest: accepting publish request for version [{}] and term [{}]",
             clusterState.version(), clusterState.term());
-        persistedState.setLastAcceptedState(clusterState);
+        persistedState.setLastAcceptedState(clusterState);//将state保存。master对应LucenePersistedState（同步刷盘），data对应AsyncLucenePersistedState（异步刷盘）
         assert getLastAcceptedState() == clusterState;
 
         return new PublishResponse(clusterState.term(), clusterState.version());
@@ -389,8 +389,8 @@ public class CoordinationState {
 
         logger.trace("handlePublishResponse: accepted publish response for version [{}] and term [{}] from [{}]",
             publishResponse.getVersion(), publishResponse.getTerm(), sourceNode);
-        publishVotes.addVote(sourceNode);
-        if (isPublishQuorum(publishVotes)) {
+        publishVotes.addVote(sourceNode);//如果返回response的是mater-eletiable节点的话，增加vote计数
+        if (isPublishQuorum(publishVotes)) {//如果确认publish的节点符合Quorum数量，则返回ApplyCommitRequest
             logger.trace("handlePublishResponse: value committed for version [{}] and term [{}]",
                 publishResponse.getVersion(), publishResponse.getTerm());
             return Optional.of(new ApplyCommitRequest(localNode, publishResponse.getTerm(), publishResponse.getVersion()));
@@ -430,7 +430,7 @@ public class CoordinationState {
         logger.trace("handleCommit: applying commit request for term [{}] and version [{}]", applyCommit.getTerm(),
             applyCommit.getVersion());
 
-        persistedState.markLastAcceptedStateAsCommitted();
+        persistedState.markLastAcceptedStateAsCommitted();//可能不会做什么
         assert getLastCommittedConfiguration().equals(getLastAcceptedConfiguration());
     }
 

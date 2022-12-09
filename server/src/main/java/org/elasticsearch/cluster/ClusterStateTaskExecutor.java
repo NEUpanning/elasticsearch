@@ -23,7 +23,7 @@ import org.elasticsearch.common.Nullable;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-
+//用于处理不同的影响集群状态变化的task
 public interface ClusterStateTaskExecutor<T> {
     /**
      * Update the cluster state based on the current state and the given tasks. Return the *same instance* if no state
