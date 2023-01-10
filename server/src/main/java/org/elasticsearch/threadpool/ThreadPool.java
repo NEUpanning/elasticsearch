@@ -529,7 +529,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         }
     }
 
-    /**
+    /**缓存nanoTime和currentTimeMillis。方便其他类获取
      * A thread to cache millisecond time values from
      * {@link System#nanoTime()} and {@link System#currentTimeMillis()}.
      *

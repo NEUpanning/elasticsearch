@@ -102,7 +102,7 @@ public abstract class PrimaryShardAllocator extends BaseGatewayShardAllocator {
         assert inSyncAllocationIds.isEmpty() == false;
         // use in-sync allocation ids to select nodes
         final NodeShardsResult nodeShardsResult = buildNodeShardsResult(unassignedShard, snapshotRestore,
-            allocation.getIgnoreNodes(unassignedShard.shardId()), inSyncAllocationIds, shardState, logger);
+            allocation.getIgnoreNodes(unassignedShard.shardId()), inSyncAllocationIds, shardState, logger); // 找到所有在in sync allocation id中的节点，并将他们排序
         final boolean enoughAllocationsFound = nodeShardsResult.orderedAllocationCandidates.size() > 0;
         logger.debug("[{}][{}]: found {} allocation candidates of {} based on allocation ids: [{}]", unassignedShard.index(),
             unassignedShard.id(), nodeShardsResult.orderedAllocationCandidates.size(), unassignedShard, inSyncAllocationIds);

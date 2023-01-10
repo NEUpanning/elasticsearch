@@ -118,7 +118,7 @@ public class AllocationService {
         startedShards = new ArrayList<>(startedShards);
         startedShards.sort(Comparator.comparing(ShardRouting::primary));
         applyStartedShards(allocation, startedShards);
-        for (final ExistingShardsAllocator allocator : existingShardsAllocators.values()) {
+        for (final ExistingShardsAllocator allocator : existingShardsAllocators.values()) {  //由于该分片用的是existingShardsAllocators其中一个，在这里为了省事直接全部apply即使对应的allocator未对分片分配
             allocator.applyStartedShards(startedShards, allocation);
         }
         assert RoutingNodes.assertShardStats(allocation.routingNodes());
@@ -441,7 +441,7 @@ public class AllocationService {
         while (primaryIterator.hasNext()) {
             final ShardRouting shardRouting = primaryIterator.next();
             if (shardRouting.primary()) {// 遍历所有primary
-                getAllocatorForShard(shardRouting, allocation).allocateUnassigned(shardRouting, allocation, primaryIterator);
+                getAllocatorForShard(shardRouting, allocation).allocateUnassigned(shardRouting, allocation, primaryIterator); //使用该index配置的existing allocator来分配
             }
         }
 

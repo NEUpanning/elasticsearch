@@ -389,7 +389,7 @@ public class CoordinationState {
 
         logger.trace("handlePublishResponse: accepted publish response for version [{}] and term [{}] from [{}]",
             publishResponse.getVersion(), publishResponse.getTerm(), sourceNode);
-        publishVotes.addVote(sourceNode);//如果返回response的是mater-eletiable节点的话，增加vote计数
+        publishVotes.addVote(sourceNode);//如果返回response的是mater-elegiable节点的话，增加vote计数
         if (isPublishQuorum(publishVotes)) {//如果确认publish的节点符合Quorum数量，则返回ApplyCommitRequest
             logger.trace("handlePublishResponse: value committed for version [{}] and term [{}]",
                 publishResponse.getVersion(), publishResponse.getTerm());

@@ -204,7 +204,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
             this::isInitialConfigurationSet, this::setInitialConfiguration);
         this.discoveryUpgradeService = new DiscoveryUpgradeService(settings, transportService,
             this::isInitialConfigurationSet, joinHelper, peerFinder::getFoundPeers, this::setInitialConfiguration);
-        this.lagDetector = new LagDetector(settings, transportService.getThreadPool(), n -> removeNode(n, "lagging"),
+        this.lagDetector = new LagDetector(settings, transportService.getThreadPool(), n -> removeNode(n, "lagging"),//节点集群状态落后，直接移除集群
             transportService::getLocalNode);
         this.clusterFormationFailureHelper = new ClusterFormationFailureHelper(settings, this::getClusterFormationState,
             transportService.getThreadPool(), joinHelper::logLastFailedJoinAttempt);
@@ -546,7 +546,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
         if (mode != Mode.CANDIDATE) {
             final Mode prevMode = mode;
             mode = Mode.CANDIDATE;
-            cancelActivePublication("become candidate: " + method);
+            cancelActivePublication("become candidate: " + method);//终止现有的publish
             joinAccumulator.close(mode);
             joinAccumulator = joinHelper.new CandidateJoinAccumulator();
 
@@ -1373,8 +1373,8 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
             logger.debug("publication ended unsuccessfully: {}", this);
 
             // check if node has not already switched modes (by bumping term)
-            if (isActiveForCurrentLeader()) {
-                becomeCandidate(reason);
+            if (isActiveForCurrentLeader()) {//如果该节点还是master
+                becomeCandidate(reason);//节点退位master，成为candidate
             }
         }
 

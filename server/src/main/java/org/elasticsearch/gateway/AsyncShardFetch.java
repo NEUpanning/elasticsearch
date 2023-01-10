@@ -362,7 +362,7 @@ public abstract class AsyncShardFetch<T extends BaseNodeResponse> implements Rel
         private T value;
         private boolean valueSet;
         private Throwable failure;
-        private long fetchingRound;
+        private long fetchingRound;  //用于区分其他节点返回的新旧元数据
 
         NodeEntry(String nodeId) {
             this.nodeId = nodeId;

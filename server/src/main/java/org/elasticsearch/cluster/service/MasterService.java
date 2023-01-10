@@ -69,7 +69,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.util.concurrent.EsExecutors.daemonThreadFactory;
-
+//主要负责集群状态更新。
 public class MasterService extends AbstractLifecycleComponent {
     private static final Logger logger = LogManager.getLogger(MasterService.class);
 
@@ -79,7 +79,7 @@ public class MasterService extends AbstractLifecycleComponent {
 
     static final String MASTER_UPDATE_THREAD_NAME = "masterService#updateTask";
 
-    ClusterStatePublisher clusterStatePublisher;//dicovery层实现
+    ClusterStatePublisher clusterStatePublisher;//dicovery层实现，负责集群状态发布
 
     private final String nodeName;
     //从dicovery层获取，一般是Coordinator
@@ -87,10 +87,10 @@ public class MasterService extends AbstractLifecycleComponent {
 
     private volatile TimeValue slowTaskLoggingThreshold;
 
-    protected final ThreadPool threadPool;
+    protected final ThreadPool threadPool; //主要使用threadPool$CachedTimeThread获取时间
 
-    private volatile PrioritizedEsThreadPoolExecutor threadPoolExecutor;
-    private volatile Batcher taskBatcher;
+    private volatile PrioritizedEsThreadPoolExecutor threadPoolExecutor;//master的单线程优先级线程池
+    private volatile Batcher taskBatcher; //批量执行状态更新任务
 
     public MasterService(Settings settings, ClusterSettings clusterSettings, ThreadPool threadPool) {
         this.nodeName = Objects.requireNonNull(Node.NODE_NAME_SETTING.get(settings));
