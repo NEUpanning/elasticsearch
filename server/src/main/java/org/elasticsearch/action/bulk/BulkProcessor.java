@@ -134,7 +134,7 @@ public class BulkProcessor implements Closeable {
             return this;
         }
 
-        /**
+        /**定时flush bulk request。注意；不受BulkActions和BulkSize配置的影响
          * Sets a flush interval flushing *any* bulk actions pending if the interval passes. Defaults to not set.
          * <p>
          * Note, both {@link #setBulkActions(int)} and {@link #setBulkSize(org.elasticsearch.common.unit.ByteSizeValue)}
@@ -252,8 +252,8 @@ public class BulkProcessor implements Closeable {
             Scheduler.wrapAsScheduledCancellable(scheduledThreadPoolExecutor.schedule(command, delay.millis(), TimeUnit.MILLISECONDS));
     }
 
-    private final int bulkActions;
-    private final long bulkSize;
+    private final int bulkActions;// doc request的数量阈值
+    private final long bulkSize;// bulk request的大小阈值
 
     private final Scheduler.Cancellable cancellableFlushTask;
 
@@ -276,7 +276,7 @@ public class BulkProcessor implements Closeable {
         this.bulkRequestSupplier = bulkRequestSupplier;
         this.bulkRequestHandler = new BulkRequestHandler(consumer, backoffPolicy, listener, retryScheduler, concurrentRequests);
         // Start period flushing task after everything is setup
-        this.cancellableFlushTask = startFlushTask(flushInterval, flushScheduler);
+        this.cancellableFlushTask = startFlushTask(flushInterval, flushScheduler);  //定时flush bulk request
         this.onClose = onClose;
     }
 

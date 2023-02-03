@@ -484,8 +484,8 @@ public class InternalEngine extends Engine {
         final int opsRecovered;
         final long localCheckpoint = getProcessedLocalCheckpoint();
         if (localCheckpoint < recoverUpToSeqNo) {
-            try (Translog.Snapshot snapshot = translog.newSnapshot(localCheckpoint + 1, recoverUpToSeqNo)) {
-                opsRecovered = translogRecoveryRunner.run(this, snapshot);
+            try (Translog.Snapshot snapshot = translog.newSnapshot(localCheckpoint + 1, recoverUpToSeqNo)) {//生成translog快照
+                opsRecovered = translogRecoveryRunner.run(this, snapshot);//返回重放的operation数量
             } catch (Exception e) {
                 throw new EngineException(shardId, "failed to recover from translog", e);
             }
@@ -499,7 +499,7 @@ public class InternalEngine extends Engine {
         logger.trace(() -> new ParameterizedMessage(
                 "flushing post recovery from translog: ops recovered [{}], current translog generation [{}]",
                 opsRecovered, translog.currentFileGeneration()));
-        flush(false, true);
+        flush(false, true);// flush translog
         translog.trimUnreferencedReaders();
     }
 

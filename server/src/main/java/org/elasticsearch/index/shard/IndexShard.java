@@ -1554,7 +1554,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         while ((operation = snapshot.next()) != null) {
             try {
                 logger.trace("[translog] recover op {}", operation);
-                Engine.Result result = applyTranslogOperation(engine, operation, origin);
+                Engine.Result result = applyTranslogOperation(engine, operation, origin);//遍历每条operation进行回放
                 switch (result.getResultType()) {
                     case FAILURE:
                         throw result.getFailure();
@@ -1631,7 +1631,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
 
         // we disable deletes since we allow for operations to be executed against the shard while recovering
         // but we need to make sure we don't loose deletes until we are done recovering
-        config.setEnableGcDeletes(false);
+        config.setEnableGcDeletes(false);//关闭translog删除
         updateRetentionLeasesOnReplica(loadRetentionLeases());
         assert recoveryState.getRecoverySource().expectEmptyRetentionLeases() == false || getRetentionLeases().leases().isEmpty()
             : "expected empty set of retention leases with recovery source [" + recoveryState.getRecoverySource()
@@ -1719,8 +1719,8 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     public void finalizeRecovery() {
         recoveryState().setStage(RecoveryState.Stage.FINALIZE);
         Engine engine = getEngine();
-        engine.refresh("recovery_finalization");
-        engine.config().setEnableGcDeletes(true);
+        engine.refresh("recovery_finalization");//执行refresh使得索引数据可以被搜索
+        engine.config().setEnableGcDeletes(true);//允许删除translog
     }
 
     /**
@@ -2592,11 +2592,11 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         // }
         assert recoveryState.getRecoverySource().equals(shardRouting.recoverySource());
         switch (recoveryState.getRecoverySource().getType()) {
-            case EMPTY_STORE:
-            case EXISTING_STORE:
+            case EMPTY_STORE://没有数据，例如新建索引。什么也不做
+            case EXISTING_STORE://从本地 store 进行recovery
                 executeRecovery("from store", recoveryState, recoveryListener, this::recoverFromStore);
                 break;
-            case PEER:
+            case PEER://从其他节点进行recovery(比如集群启动，副本分片recovery)
                 try {
                     markAsRecovering("from " + recoveryState.getSourceNode(), recoveryState);
                     recoveryTargetService.startRecovery(this, recoveryState.getSourceNode(), recoveryListener);
@@ -2657,7 +2657,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     private void executeRecovery(String reason, RecoveryState recoveryState, PeerRecoveryTargetService.RecoveryListener recoveryListener,
                                  CheckedConsumer<ActionListener<Boolean>, Exception> action) {
         markAsRecovering(reason, recoveryState); // mark the shard as recovering on the cluster state thread
-        threadPool.generic().execute(ActionRunnable.wrap(ActionListener.wrap(r -> {
+        threadPool.generic().execute(ActionRunnable.wrap(ActionListener.wrap(r -> {//在新的线程池中执行recover
                 if (r) {
                     recoveryListener.onRecoveryDone(recoveryState);
                 }

@@ -190,11 +190,11 @@ public class PeerRecoveryTargetService implements IndexEventListener {
                     indexShard.preRecovery();
                     assert recoveryTarget.sourceNode() != null : "can not do a recovery without a source node";
                     logger.trace("{} preparing shard for peer recovery", recoveryTarget.shardId());
-                    indexShard.prepareForIndexRecovery();
-                    final long startingSeqNo = indexShard.recoverLocallyUpToGlobalCheckpoint();
+                    indexShard.prepareForIndexRecovery();// index阶段
+                    final long startingSeqNo = indexShard.recoverLocallyUpToGlobalCheckpoint();//重放本地translog尽量到global checkpoint
                     assert startingSeqNo == UNASSIGNED_SEQ_NO || recoveryTarget.state().getStage() == RecoveryState.Stage.TRANSLOG :
                         "unexpected recovery stage [" + recoveryTarget.state().getStage() + "] starting seqno [ " + startingSeqNo + "]";
-                    startRequest = getStartRecoveryRequest(logger, clusterService.localNode(), recoveryTarget, startingSeqNo);
+                    startRequest = getStartRecoveryRequest(logger, clusterService.localNode(), recoveryTarget, startingSeqNo);//构建准备发到主分片的startRequest
                     requestToSend = startRequest;
                     actionName = PeerRecoverySourceService.Actions.START_RECOVERY;
                 } catch (final Exception e) {
@@ -221,7 +221,7 @@ public class PeerRecoveryTargetService implements IndexEventListener {
                 // the issues that a missing call to this could cause are sneaky and hard to debug. If we don't need it on this
                 // call we can potentially remove it altogether which we should do it in a major release only with enough
                 // time to test. This shoudl be done for 7.0 if possible
-                transportService.sendRequest(startRequest.sourceNode(), actionName, requestToSend, responseHandler)
+                transportService.sendRequest(startRequest.sourceNode(), actionName, requestToSend, responseHandler)//发送recovery请求给primary
             );
         } catch (CancellableThreads.ExecutionCancelledException e) {
             logger.trace("recovery cancelled", e);

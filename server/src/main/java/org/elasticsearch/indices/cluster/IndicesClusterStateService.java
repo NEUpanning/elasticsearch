@@ -551,7 +551,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     }
 
     private void createOrUpdateShards(final ClusterState state) {
-        RoutingNode localRoutingNode = state.getRoutingNodes().node(state.nodes().getLocalNodeId());
+        RoutingNode localRoutingNode = state.getRoutingNodes().node(state.nodes().getLocalNodeId());//state中当前节点上的shard routing
         if (localRoutingNode == null) {
             return;
         }
@@ -565,10 +565,10 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
                 AllocatedIndex<? extends Shard> indexService = indicesService.indexService(shardId.getIndex());
                 assert indexService != null : "index " + shardId.getIndex() + " should have been created by createIndices";
                 Shard shard = indexService.getShardOrNull(shardId.id());
-                if (shard == null) {
+                if (shard == null) {//如果在当前indexService中找不到新集群状态中的分片，说明需要创建
                     assert shardRouting.initializing() : shardRouting + " should have been removed by failMissingShards";
                     createShard(nodes, routingTable, shardRouting, state);
-                } else {
+                } else {//如果在当前indexService中找到新集群状态中的分片，说明可能需要更新
                     updateShard(nodes, shardRouting, shard, routingTable, state);
                 }
             }
@@ -579,8 +579,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         assert shardRouting.initializing() : "only allow shard creation for initializing shard but was " + shardRouting;
 
         DiscoveryNode sourceNode = null;
-        if (shardRouting.recoverySource().getType() == Type.PEER)  {
-            sourceNode = findSourceNodeForPeerRecovery(logger, routingTable, nodes, shardRouting);
+        if (shardRouting.recoverySource().getType() == Type.PEER)  {//从其他节点恢复（relocate 或者 副本从主分片恢复）
+            sourceNode = findSourceNodeForPeerRecovery(logger, routingTable, nodes, shardRouting);//主节点或者relocate source node
             if (sourceNode == null) {
                 logger.trace("ignoring initializing shard {} - no source node can be found.", shardRouting.shardId());
                 return;
@@ -619,14 +619,14 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             final Set<String> inSyncIds = indexMetadata.inSyncAllocationIds(shard.shardId().id());
             final IndexShardRoutingTable indexShardRoutingTable = routingTable.shardRoutingTable(shardRouting.shardId());
             shard.updateShardState(shardRouting, primaryTerm, primaryReplicaSyncer::resync, clusterState.version(),
-                inSyncIds, indexShardRoutingTable);
+                inSyncIds, indexShardRoutingTable);//根据新的集群状态更新当前分片的信息，包含routing term inSyncIds
         } catch (Exception e) {
             failAndRemoveShard(shardRouting, true, "failed updating shard routing entry", e, clusterState);
             return;
         }
 
         final IndexShardState state = shard.state();
-        if (shardRouting.initializing() && (state == IndexShardState.STARTED || state == IndexShardState.POST_RECOVERY)) {
+        if (shardRouting.initializing() && (state == IndexShardState.STARTED || state == IndexShardState.POST_RECOVERY)) {//master认为该分片处于initializing状态，但当前该分片已经处于started或恢复完成状态
             // the master thinks we are initializing, but we are already started or on POST_RECOVERY and waiting
             // for master to confirm a shard started message (either master failover, or a cluster event before
             // we managed to tell the master we started), mark us as started

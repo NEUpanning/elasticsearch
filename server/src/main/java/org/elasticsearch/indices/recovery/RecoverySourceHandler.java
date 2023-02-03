@@ -190,15 +190,15 @@ public class RecoverySourceHandler {
             } else {
                 historySource = Engine.HistorySource.TRANSLOG;
             }
-            final Closeable retentionLock = shard.acquireHistoryRetentionLock(historySource);
+            final Closeable retentionLock = shard.acquireHistoryRetentionLock(historySource);//获取锁，保证translog不被清理。因为这些新增的translog需要在replica回放
             resources.add(retentionLock);
             final long startingSeqNo;
-            final boolean isSequenceNumberBasedRecovery
+            final boolean isSequenceNumberBasedRecovery //判断是否可以从SequenceNumber恢复
                 = request.startingSeqNo() != SequenceNumbers.UNASSIGNED_SEQ_NO
                 && isTargetSameHistory()
-                && shard.hasCompleteHistoryOperations("peer-recovery", historySource, request.startingSeqNo())
+                && shard.hasCompleteHistoryOperations("peer-recovery", historySource, request.startingSeqNo())//检查是否有需要的所有历史记录（Lucene（retention lease）或者translog）
                 && (historySource == Engine.HistorySource.TRANSLOG ||
-                   (retentionLeaseRef.get() != null && retentionLeaseRef.get().retainingSequenceNumber() <= request.startingSeqNo()));
+                   (retentionLeaseRef.get() != null && retentionLeaseRef.get().retainingSequenceNumber() <= request.startingSeqNo()));//retention lease是否包含replica没有的数据
             // NB check hasCompleteHistoryOperations when computing isSequenceNumberBasedRecovery, even if there is a retention lease,
             // because when doing a rolling upgrade from earlier than 7.4 we may create some leases that are initially unsatisfied. It's
             // possible there are other cases where we cannot satisfy all leases, because that's not a property we currently expect to hold.
@@ -207,7 +207,7 @@ public class RecoverySourceHandler {
 
             if (isSequenceNumberBasedRecovery && softDeletesEnabled && retentionLeaseRef.get() != null) {
                 // all the history we need is retained by an existing retention lease, so we do not need a separate retention lock
-                retentionLock.close();
+                retentionLock.close();// retention lease中有数据，不需要从translog恢复
                 logger.trace("history is retained by {}", retentionLeaseRef.get());
             } else {
                 // all the history we need is retained by the retention lock, obtained before calling shard.hasCompleteHistoryOperations()
@@ -215,13 +215,13 @@ public class RecoverySourceHandler {
                 // local checkpoint will be retained for the duration of this recovery.
                 logger.trace("history is retained by retention lock");
             }
-
+            // 四个step 复制lucene文件  replica开启engine可以接受数据写入  复制translog  结束
             final StepListener<SendFileResult> sendFileStep = new StepListener<>();
             final StepListener<TimeValue> prepareEngineStep = new StepListener<>();
             final StepListener<SendSnapshotResult> sendSnapshotStep = new StepListener<>();
             final StepListener<Void> finalizeStep = new StepListener<>();
 
-            if (isSequenceNumberBasedRecovery) {
+            if (isSequenceNumberBasedRecovery) {//跳过send file
                 logger.trace("performing sequence numbers based recovery. starting at [{}]", request.startingSeqNo());
                 startingSeqNo = request.startingSeqNo();
                 if (retentionLeaseRef.get() == null) {
@@ -283,7 +283,7 @@ public class RecoverySourceHandler {
 
                     deleteRetentionLeaseStep.whenComplete(ignored -> {
                         assert Transports.assertNotTransportThread(RecoverySourceHandler.this + "[phase1]");
-                        phase1(safeCommitRef.getIndexCommit(), startingSeqNo, () -> estimateNumOps, sendFileStep);
+                        phase1(safeCommitRef.getIndexCommit(), startingSeqNo, () -> estimateNumOps, sendFileStep);//执行phase1。Phase1 检查目标节点上的段文件并复制丢失的段。只有具有相同大小和校验和的段才能被重用
                     }, onFailure);
 
                 } catch (final Exception e) {
@@ -296,7 +296,7 @@ public class RecoverySourceHandler {
                 assert Transports.assertNotTransportThread(RecoverySourceHandler.this + "[prepareTargetForTranslog]");
                 // For a sequence based recovery, the target can keep its local translog
                 prepareTargetForTranslog(
-                    shard.estimateNumberOfHistoryOperations("peer-recovery", historySource, startingSeqNo), prepareEngineStep);
+                    shard.estimateNumberOfHistoryOperations("peer-recovery", historySource, startingSeqNo), prepareEngineStep);//同步发送给replica请求，让他启动engine准备接收translog
             }, onFailure);
 
             prepareEngineStep.whenComplete(prepareEngineTime -> {
@@ -313,7 +313,7 @@ public class RecoverySourceHandler {
                 final long endingSeqNo = shard.seqNoStats().getMaxSeqNo();
                 logger.trace("snapshot translog for recovery; current size is [{}]",
                     shard.estimateNumberOfHistoryOperations("peer-recovery", historySource, startingSeqNo));
-                final Translog.Snapshot phase2Snapshot = shard.getHistoryOperations("peer-recovery", historySource, startingSeqNo);
+                final Translog.Snapshot phase2Snapshot = shard.getHistoryOperations("peer-recovery", historySource, startingSeqNo);//根据startingSeqNo对lucene index和translog做快照
                 resources.add(phase2Snapshot);
                 retentionLock.close();
 
@@ -324,7 +324,7 @@ public class RecoverySourceHandler {
                 final RetentionLeases retentionLeases = shard.getRetentionLeases();
                 final long mappingVersionOnPrimary = shard.indexSettings().getIndexMetadata().getMappingVersion();
                 phase2(startingSeqNo, endingSeqNo, phase2Snapshot, maxSeenAutoIdTimestamp, maxSeqNoOfUpdatesOrDeletes,
-                    retentionLeases, mappingVersionOnPrimary, sendSnapshotStep);
+                    retentionLeases, mappingVersionOnPrimary, sendSnapshotStep);//将快照发送到replica
 
             }, onFailure);
 
@@ -486,7 +486,7 @@ public class RecoverySourceHandler {
                             recoverySourceMetadata.asMap().size() + " files", name);
                 }
             }
-            if (canSkipPhase1(recoverySourceMetadata, request.metadataSnapshot()) == false) {
+            if (canSkipPhase1(recoverySourceMetadata, request.metadataSnapshot()) == false) {//如果sync id和SeqNos相同则跳过phase1
                 final List<String> phase1FileNames = new ArrayList<>();
                 final List<Long> phase1FileSizes = new ArrayList<>();
                 final List<String> phase1ExistingFileNames = new ArrayList<>();
@@ -500,7 +500,7 @@ public class RecoverySourceHandler {
                 // Generate a "diff" of all the identical, different, and missing
                 // segment files on the target node, using the existing files on
                 // the source node
-                final Store.RecoveryDiff diff = recoverySourceMetadata.recoveryDiff(request.metadataSnapshot());
+                final Store.RecoveryDiff diff = recoverySourceMetadata.recoveryDiff(request.metadataSnapshot());//发送差异文件
                 for (StoreFileMetadata md : diff.identical) {
                     phase1ExistingFileNames.add(md.name());
                     phase1ExistingFileSizes.add(md.length());

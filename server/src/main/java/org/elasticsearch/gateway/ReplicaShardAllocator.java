@@ -212,7 +212,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
                 // we found a match
                 return AllocateUnassignedDecision.yes(nodeWithHighestMatch.node(), null, nodeDecisions, true);// 返回最匹配节点的决定
             }
-        } else if (matchingNodes.hasAnyData() == false && unassignedShard.unassignedInfo().isDelayed()) {//节点无数据则延迟分配
+        } else if (matchingNodes.hasAnyData() == false && unassignedShard.unassignedInfo().isDelayed()) {//节点无数据且标记延迟分配则延迟分配
             // if we didn't manage to find *any* data (regardless of matching sizes), and the replica is
             // unassigned due to a node leaving, so we delay allocation of this replica to see if the
             // node with the shard copy will rejoin so we can re-use the copy it has

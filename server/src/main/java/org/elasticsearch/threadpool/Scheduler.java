@@ -154,7 +154,7 @@ public interface Scheduler {
      */
     interface ScheduledCancellable extends Delayed, Cancellable { }
 
-    /**
+    /** 定时执行方法：构造方法中使用jdk进行单次延迟执行，其中执行AbstractRunnable.run,其中的doRun为要执行的command，onAfter方法中再次单次延迟执行。   当上一个command执行完成后再等待interval后执行下一次
      * This class encapsulates the scheduling of a {@link Runnable} that needs to be repeated on a interval. For example, checking a value
      * for cleanup every second could be done by passing in a Runnable that can perform the check and the specified interval between
      * executions of this runnable. <em>NOTE:</em> the runnable is only rescheduled to run again after completion of the runnable.

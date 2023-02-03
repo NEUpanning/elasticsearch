@@ -90,7 +90,7 @@ public abstract class RecoverySource implements Writeable, ToXContentObject {
         EXISTING_STORE,
         PEER,
         SNAPSHOT,
-        LOCAL_SHARDS
+        LOCAL_SHARDS//recover from other local shards on same node (shrink index action)
     }
 
     public abstract Type getType();

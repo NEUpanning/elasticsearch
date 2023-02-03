@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link UnassignedInfo#INDEX_DELAYED_NODE_LEFT_TIMEOUT_SETTING}
  * (see {@link AllocationService#disassociateDeadNodes(RoutingAllocation)}.
  * This class is responsible for choosing the next (closest) delay expiration of a
- * delayed shard to schedule a reroute to remove the delay marker.
+ * delayed shard to schedule a reroute to remove the delay marker.此类负责选择延迟分片的下一个（最接近的）延迟到期时间以安排reroute以删除延迟标记。
  * The actual removal of the delay marker happens in
  * {@link AllocationService#removeDelayMarkers(RoutingAllocation)}, triggering yet
  * another cluster change event.

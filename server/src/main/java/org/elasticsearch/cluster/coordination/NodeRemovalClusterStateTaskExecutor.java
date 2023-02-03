@@ -94,7 +94,7 @@ public class NodeRemovalClusterStateTaskExecutor implements ClusterStateTaskExec
                                                                  ClusterState remainingNodesClusterState) {
         ClusterState ptasksDisassociatedState = PersistentTasksCustomMetadata.disassociateDeadNodes(remainingNodesClusterState);
         final ClusterTasksResult.Builder<Task> resultBuilder = ClusterTasksResult.<Task>builder().successes(tasks);
-        return resultBuilder.build(allocationService.disassociateDeadNodes(ptasksDisassociatedState, true, describeTasks(tasks)));
+        return resultBuilder.build(allocationService.disassociateDeadNodes(ptasksDisassociatedState, true, describeTasks(tasks)));//更新routingNodes,还有分片状态
     }
 
     // visible for testing

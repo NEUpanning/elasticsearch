@@ -373,7 +373,7 @@ final class StoreRecovery {
         indexShard.preRecovery();
         final RecoveryState recoveryState = indexShard.recoveryState();
         final boolean indexShouldExists = recoveryState.getRecoverySource().getType() != RecoverySource.Type.EMPTY_STORE;
-        indexShard.prepareForIndexRecovery();
+        indexShard.prepareForIndexRecovery();//更新状态为index
         SegmentInfos si = null;
         final Store store = indexShard.store();
         store.incRef();
@@ -433,9 +433,9 @@ final class StoreRecovery {
                 writeEmptyRetentionLeasesFile(indexShard);
                 indexShard.recoveryState().getIndex().setFileDetailsComplete();
             }
-            indexShard.openEngineAndRecoverFromTranslog();
+            indexShard.openEngineAndRecoverFromTranslog();//执行translog阶段
             indexShard.getEngine().fillSeqNoGaps(indexShard.getPendingPrimaryTerm());
-            indexShard.finalizeRecovery();
+            indexShard.finalizeRecovery();//recovery结束
             indexShard.postRecovery("post recovery from shard_store");
         } catch (EngineException | IOException e) {
             throw new IndexShardRecoveryException(shardId, "failed to recover from gateway", e);

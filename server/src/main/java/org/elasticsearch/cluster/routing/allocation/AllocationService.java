@@ -65,6 +65,7 @@ import static org.elasticsearch.cluster.routing.UnassignedInfo.INDEX_DELAYED_NOD
  * {@link AllocationService} keeps {@link AllocationDeciders} to choose nodes
  * for shard allocation. This class also manages new nodes joining the cluster
  * and rerouting of shards.
+ *
  */
 public class AllocationService {
 
@@ -299,7 +300,7 @@ public class AllocationService {
     }
 
     /**
-     * Removes delay markers from unassigned shards based on current time stamp.
+     * Removes delay markers from unassigned shards based on current time stamp.  delay markers实际就是UnassignedInfo中的一个布尔状态
      */
     private void removeDelayMarkers(RoutingAllocation allocation) {
         final RoutingNodes.UnassignedShards.UnassignedIterator unassignedIterator = allocation.routingNodes().unassigned().iterator();
@@ -384,6 +385,7 @@ public class AllocationService {
      * Reroutes the routing table based on the live nodes.
      * <p>
      * If the same instance of ClusterState is returned, then no change has been made.
+     * 输入clusterState,输出处理之后的clusterState
      */
     public ClusterState reroute(ClusterState clusterState, String reason) {
         ClusterState fixedClusterState = adaptAutoExpandReplicas(clusterState);

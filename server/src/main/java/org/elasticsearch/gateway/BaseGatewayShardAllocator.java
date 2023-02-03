@@ -56,7 +56,7 @@ public abstract class BaseGatewayShardAllocator {
                                    ExistingShardsAllocator.UnassignedAllocationHandler unassignedAllocationHandler) {
         final AllocateUnassignedDecision allocateUnassignedDecision = makeAllocationDecision(shardRouting, allocation, logger);
 
-        if (allocateUnassignedDecision.isDecisionTaken() == false) {
+        if (allocateUnassignedDecision.isDecisionTaken() == false) {//意味着该分片会被BalancedShardsAllocator进行分配，也就是分到没shard copy的新节点上
             // no decision was taken by this allocator
             return;
         }
