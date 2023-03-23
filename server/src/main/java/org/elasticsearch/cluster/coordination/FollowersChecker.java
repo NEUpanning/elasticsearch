@@ -92,7 +92,7 @@ public class FollowersChecker {
     private final TimeValue followerCheckInterval;
     private final TimeValue followerCheckTimeout;
     private final int followerCheckRetryCount;
-    private final BiConsumer<DiscoveryNode, String> onNodeFailure;
+    private final BiConsumer<DiscoveryNode, String> onNodeFailure; //Coordinator.removeNode 提交节点离开的集群任务
     private final Consumer<FollowerCheckRequest> handleRequestAndUpdateState;
 
     private final Object mutex = new Object(); // protects writes to this state; read access does not need sync
@@ -180,7 +180,7 @@ public class FollowersChecker {
         }
 
         final FastResponseState responder = this.fastResponseState;
-        if (responder.mode == Mode.FOLLOWER && responder.term == request.term) {
+        if (responder.mode == Mode.FOLLOWER && responder.term == request.term) {//判断term和节点角色（leader follower）是否相同
             logger.trace("responding to {} on fast path", request);
             transportChannel.sendResponse(Empty.INSTANCE);
             return;
@@ -192,7 +192,7 @@ public class FollowersChecker {
 
         transportService.getThreadPool().generic().execute(new AbstractRunnable() {
             @Override
-            protected void doRun() throws IOException {
+            protected void doRun() throws IOException {//走到这说明，request.term > responder.term
                 logger.trace("responding to {} on slow path", request);
                 try {
                     handleRequestAndUpdateState.accept(request);
@@ -286,7 +286,7 @@ public class FollowersChecker {
             this.discoveryNode = discoveryNode;
         }
 
-        private boolean running() {
+        private boolean running() {//因为followerCheckers会随着集群状态变更（节点加入离开集群）而变更，保存的是最新的节点列表。所以可以判断节点是否还在集群
             return this == followerCheckers.get(discoveryNode);
         }
 
@@ -310,7 +310,7 @@ public class FollowersChecker {
                 actionName = NodesFaultDetection.PING_ACTION_NAME;
                 transportRequest = new NodesFaultDetection.PingRequest(discoveryNode, ClusterName.CLUSTER_NAME_SETTING.get(settings),
                     transportService.getLocalNode(), ClusterState.UNKNOWN_VERSION);
-            } else {
+            } else {//es7走这里
                 actionName = FOLLOWER_CHECK_ACTION_NAME;
                 transportRequest = request;
             }
@@ -326,10 +326,10 @@ public class FollowersChecker {
                     public void handleResponse(Empty response) {
                         if (running() == false) {
                             logger.trace("{} no longer running", FollowerChecker.this);
-                            return;
+                            return;//节点已经离开集群，结束checker调度
                         }
 
-                        failureCountSinceLastSuccess = 0;
+                        failureCountSinceLastSuccess = 0;//check成功一次，重置fail count
                         logger.trace("{} check successful", FollowerChecker.this);
                         scheduleNextWakeUp();
                     }
@@ -351,7 +351,7 @@ public class FollowersChecker {
                         } else if (exp.getCause() instanceof NodeHealthCheckFailureException) {
                             logger.debug(() -> new ParameterizedMessage("{} health check failed", FollowerChecker.this), exp);
                             reason = "health check failed";
-                        } else if (failureCountSinceLastSuccess >= followerCheckRetryCount) {
+                        } else if (failureCountSinceLastSuccess >= followerCheckRetryCount) {//失败次数过多
                             logger.debug(() -> new ParameterizedMessage("{} failed too many times", FollowerChecker.this), exp);
                             reason = "followers check retry count exceeded";
                         } else {
@@ -360,7 +360,7 @@ public class FollowersChecker {
                             return;
                         }
 
-                        failNode(reason);
+                        failNode(reason);//节点剔除
                     }
 
 

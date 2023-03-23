@@ -440,7 +440,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
                     executionTime, newClusterState.version(),
                     newClusterState.stateUUID());
                 warnAboutSlowTaskIfNeeded(executionTime, task.source, stopWatch);
-                task.listener.onSuccess(task.source);//返回空response给master
+                task.listener.onSuccess(task.source);//对于非master返回空response给master。
             } catch (Exception e) {
                 TimeValue executionTime = TimeValue.timeValueMillis(Math.max(0, currentTimeInMillis() - startTimeMS));
                 if (logger.isTraceEnabled()) {
@@ -489,7 +489,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         logger.debug("apply cluster state with version {}", newClusterState.version());
         callClusterStateAppliers(clusterChangedEvent, stopWatch);//调用所有的appliers
 
-        nodeConnectionsService.disconnectFromNodesExcept(newClusterState.nodes());
+        nodeConnectionsService.disconnectFromNodesExcept(newClusterState.nodes());//清除断开连接节点的connection
 
         assert newClusterState.coordinationMetadata().getLastAcceptedConfiguration()
             .equals(newClusterState.coordinationMetadata().getLastCommittedConfiguration())

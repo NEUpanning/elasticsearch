@@ -122,7 +122,7 @@ public class GatewayService extends AbstractLifecycleComponent implements Cluste
 
         if (discovery instanceof Coordinator) {
             recoveryRunnable = () ->
-                    clusterService.submitStateUpdateTask("local-gateway-elected-state", new RecoverStateUpdateTask());
+                    clusterService.submitStateUpdateTask("local-gateway-elected-state", new RecoverStateUpdateTask());//使用当前节点的cluster state，触发reroute
         } else {
             final Gateway gateway = new Gateway(settings, clusterService, listGatewayMetaState);
             recoveryRunnable = () ->
@@ -165,7 +165,7 @@ public class GatewayService extends AbstractLifecycleComponent implements Cluste
         final DiscoveryNodes nodes = state.nodes();
         if (state.nodes().getMasterNodeId() == null) {
             logger.debug("not recovering from gateway, no master elected yet");
-        } else if (recoverAfterNodes != -1 && (nodes.getMasterAndDataNodes().size()) < recoverAfterNodes) {
+        } else if (recoverAfterNodes != -1 && (nodes.getMasterAndDataNodes().size()) < recoverAfterNodes) {//检查是否满足配置的master和data数量
             logger.debug("not recovering from gateway, nodes_size (data+master) [{}] < recover_after_nodes [{}]",
                 nodes.getMasterAndDataNodes().size(), recoverAfterNodes);
         } else if (recoverAfterDataNodes != -1 && nodes.getDataNodes().size() < recoverAfterDataNodes) {
@@ -221,7 +221,7 @@ public class GatewayService extends AbstractLifecycleComponent implements Cluste
                     }
                 }, recoverAfterTime, ThreadPool.Names.GENERIC);
             }
-        } else {
+        } else {//走这里
             if (recoveryInProgress.compareAndSet(false, true)) {
                 threadPool.generic().execute(new AbstractRunnable() {
                     @Override
@@ -233,7 +233,7 @@ public class GatewayService extends AbstractLifecycleComponent implements Cluste
                     @Override
                     protected void doRun() {
                         logger.debug("performing state recovery...");
-                        recoveryRunnable.run();
+                        recoveryRunnable.run();//调度cluster state 选举流程，包含所有的cluster state ，会触发allocation
                     }
                 });
             }

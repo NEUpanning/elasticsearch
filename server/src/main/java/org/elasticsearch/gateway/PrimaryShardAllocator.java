@@ -275,7 +275,7 @@ public abstract class PrimaryShardAllocator extends BaseGatewayShardAllocator {
         }
 
         final Comparator<NodeGatewayStartedShards> comparator; // allocation preference
-        if (matchAnyShard) {
+        if (matchAnyShard) {// snapshot走这个分支
             // prefer shards with matching allocation ids
             Comparator<NodeGatewayStartedShards> matchingAllocationsFirst = Comparator.comparing(
                 (NodeGatewayStartedShards state) -> inSyncAllocationIds.contains(state.allocationId())).reversed();

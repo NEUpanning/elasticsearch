@@ -95,7 +95,7 @@ public class PreBuiltTransportClientTests extends RandomizedTest {
         }
         ActionFuture<BulkResponse> bulk = client.bulk(bulkRequest);
         BulkResponse bulkItemResponses = bulk.actionGet();
-        System.out.println(bulkItemResponses);
+//        System.out.println(bulkItemResponses);
     }
 
 }

@@ -232,7 +232,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         }
 
         updateFailedShardsCache(state);
-
+//以下方法都是遍历在本节点上索引分片
         deleteIndices(event); // also deletes shards of deleted indices
 
         removeIndices(event); // also removes shards of removed indices
@@ -256,7 +256,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
      * @param state new cluster state
      */
     private void updateFailedShardsCache(final ClusterState state) {
-        RoutingNode localRoutingNode = state.getRoutingNodes().node(state.nodes().getLocalNodeId());
+        RoutingNode localRoutingNode = state.getRoutingNodes().node(state.nodes().getLocalNodeId());//会构建routing nodes
         if (localRoutingNode == null) {
             failedShardsCache.clear();
             return;
@@ -299,7 +299,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             final IndexSettings indexSettings;
             if (indexService != null) {
                 indexSettings = indexService.getIndexSettings();
-                indicesService.removeIndex(index, DELETED, "index no longer part of the metadata");
+                indicesService.removeIndex(index, DELETED, "index no longer part of the metadata");//逻辑和物理删除索引
             } else if (previousState.metadata().hasIndex(index)) {
                 // The deleted index was part of the previous cluster state, but not loaded on the local node
                 final IndexMetadata metadata = previousState.metadata().index(index);
@@ -626,7 +626,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         }
 
         final IndexShardState state = shard.state();
-        if (shardRouting.initializing() && (state == IndexShardState.STARTED || state == IndexShardState.POST_RECOVERY)) {//master认为该分片处于initializing状态，但当前该分片已经处于started或恢复完成状态
+        if (shardRouting.initializing() && (state == IndexShardState.STARTED || state == IndexShardState.POST_RECOVERY)) {//master认为该分片处于initializing状态，但当前该分片已经处于started或recovery完成状态。因为其他分片在数据节点上完成recovery后，状态变为POST_RECOVERY
             // the master thinks we are initializing, but we are already started or on POST_RECOVERY and waiting
             // for master to confirm a shard started message (either master failover, or a cluster event before
             // we managed to tell the master we started), mark us as started
@@ -635,7 +635,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
                     shardRouting.shardId(), state, nodes.getMasterNode());
             }
             if (nodes.getMasterNode() != null) {
-                shardStateAction.shardStarted(shardRouting, primaryTerm, "master " + nodes.getMasterNode() +
+                shardStateAction.shardStarted(shardRouting, primaryTerm, "master " + nodes.getMasterNode() +//会给master发送更新分片状态的请求
                         " marked shard as initializing, but shard state is [" + state + "], mark shard as started",
                     SHARD_STATE_ACTION_LISTENER, clusterState);
             }

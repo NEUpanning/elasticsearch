@@ -220,7 +220,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
          * we can continue (cf. InitialSearchPhase#maybeFork).
          */
         if (shard == null) {
-            fork(() -> onShardFailure(shardIndex, null, null, shardIt, new NoShardAvailableActionException(shardIt.shardId())));
+            fork(() -> onShardFailure(shardIndex, null, null, shardIt, new NoShardAvailableActionException(shardIt.shardId())));//shard不可用
         } else {
             final PendingExecutions pendingExecutions = throttleConcurrentRequests ?
                 pendingExecutionsPerNode.computeIfAbsent(shard.currentNodeId(), n -> new PendingExecutions(maxConcurrentRequestsPerNode))
@@ -375,13 +375,13 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
         // we do make sure to clean it on a successful response from a shard
         SearchShardTarget shardTarget = shardIt.newSearchShardTarget(nodeId);
         onShardFailure(shardIndex, shardTarget, e);
-        final ShardRouting nextShard = shardIt.nextOrNull();
+        final ShardRouting nextShard = shardIt.nextOrNull();//shardIt是某个分片ShardRouting迭代器，nextShard是下一个尝试查询的ShardRouting
         final boolean lastShard = nextShard == null;
-        if (lastShard) {
+        if (lastShard) {//ShardGroup均失败
             onShardGroupFailure(shardIndex, shardTarget, e);
         }
 
-        if (totalOps.incrementAndGet() == expectedTotalOps) {
+        if (totalOps.incrementAndGet() == expectedTotalOps) {//遍历过所有的shard
             if (logger.isDebugEnabled()) {
                 if (e != null && !TransportActions.isShardNotAvailableException(e)) {
                     logger.debug(new ParameterizedMessage(
@@ -397,7 +397,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
                 "{}: Failed to execute [{}] lastShard [{}]",
                 shard != null ? shard.shortSummary() : shardIt.shardId(), request, lastShard), e);
             if (lastShard == false) {
-                performPhaseOnShard(shardIndex, shardIt, nextShard);
+                performPhaseOnShard(shardIndex, shardIt, nextShard);//向nextShard重试
             } else {
                 // no more shards active, add a failure
                 if (logger.isDebugEnabled() && !logger.isTraceEnabled()) { // do not double log this exception

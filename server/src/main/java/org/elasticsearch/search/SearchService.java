@@ -357,9 +357,9 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         final boolean canCache = indicesService.canCache(request, context);
         context.getQueryShardContext().freezeContext();
         if (canCache) {
-            indicesService.loadIntoContext(request, context, queryPhase);
+            indicesService.loadIntoContext(request, context, queryPhase);//尝试从cache加载
         } else {
-            queryPhase.execute(context);
+            queryPhase.execute(context);//直接执行query
         }
     }
 

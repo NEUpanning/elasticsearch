@@ -71,7 +71,7 @@ public abstract class AckedClusterStateUpdateTask<Response> extends ClusterState
      * {@link AckedClusterStateUpdateTask#ackTimeout()} has expired
      */
     public void onAckTimeout() {
-        listener.onResponse(newResponse(false));
+        listener.onResponse(newResponse(false));//超时返回ack失败
     }
 
     @Override

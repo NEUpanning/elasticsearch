@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-history-retention.html
- * 用于跟踪replica的回放操作
+ * 用于跟踪replica的回放操作。避免在replica复制primary分片的数据前，有软删除的操作被merge导致这条数据在replica没被删除，只能通过完整拷贝整个文件的方式解决
  * A "shard history retention lease" (or "retention lease" for short) is conceptually a marker containing a retaining sequence number such
  * that all operations with sequence number at least that retaining sequence number will be retained during merge operations (which could
  * otherwise merge away operations that have been soft deleted). Each retention lease contains a unique identifier, the retaining sequence

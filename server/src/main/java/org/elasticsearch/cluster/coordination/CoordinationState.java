@@ -333,13 +333,13 @@ public class CoordinationState {
      */
     public PublishResponse handlePublishRequest(PublishRequest publishRequest) {
         final ClusterState clusterState = publishRequest.getAcceptedState();
-        if (clusterState.term() != getCurrentTerm()) {
+        if (clusterState.term() != getCurrentTerm()) {//检查term（也是主节点term）
             logger.debug("handlePublishRequest: ignored publish request due to term mismatch (expected: [{}], actual: [{}])",
                 getCurrentTerm(), clusterState.term());
             throw new CoordinationStateRejectedException("incoming term " + clusterState.term() + " does not match current term " +
                 getCurrentTerm());
         }
-        if (clusterState.term() == getLastAcceptedTerm() && clusterState.version() <= getLastAcceptedVersion()) {
+        if (clusterState.term() == getLastAcceptedTerm() && clusterState.version() <= getLastAcceptedVersion()) {//收到的cluster state版本较小，抛出异常
             if (clusterState.term() == ZEN1_BWC_TERM
                 && clusterState.nodes().getMasterNode().equals(getLastAcceptedState().nodes().getMasterNode()) == false) {
                 logger.debug("handling publish request in compatibility mode despite version mismatch (expected: >[{}], actual: [{}])",
@@ -354,7 +354,7 @@ public class CoordinationState {
 
         logger.trace("handlePublishRequest: accepting publish request for version [{}] and term [{}]",
             clusterState.version(), clusterState.term());
-        persistedState.setLastAcceptedState(clusterState);//将state保存。master对应LucenePersistedState（同步刷盘），data对应AsyncLucenePersistedState（异步刷盘）
+        persistedState.setLastAcceptedState(clusterState);//将state保存。master-eligible对应LucenePersistedState（同步刷盘），data对应AsyncLucenePersistedState（异步刷盘）
         assert getLastAcceptedState() == clusterState;
 
         return new PublishResponse(clusterState.term(), clusterState.version());
@@ -430,7 +430,7 @@ public class CoordinationState {
         logger.trace("handleCommit: applying commit request for term [{}] and version [{}]", applyCommit.getTerm(),
             applyCommit.getVersion());
 
-        persistedState.markLastAcceptedStateAsCommitted();//可能不会做什么
+        persistedState.markLastAcceptedStateAsCommitted();//标记publish阶段的LastAcceptedState标记为commited
         assert getLastCommittedConfiguration().equals(getLastAcceptedConfiguration());
     }
 

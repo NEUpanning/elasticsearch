@@ -121,7 +121,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+//一个engine对应一个shard
 public class InternalEngine extends Engine {
 
     /**

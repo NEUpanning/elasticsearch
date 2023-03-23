@@ -589,7 +589,7 @@ public class IndicesService extends AbstractLifecycleComponent
     public <T, E extends Exception> T withTempIndexService(final IndexMetadata indexMetadata,
                                                            CheckedFunction<IndexService, T, E> indexServiceConsumer) throws IOException, E {
         final Index index = indexMetadata.getIndex();
-        if (hasIndex(index)) {
+        if (hasIndex(index)) {//索引存在抛异常
             throw new ResourceAlreadyExistsException(index);
         }
         List<IndexEventListener> finalListeners = Collections.singletonList(
@@ -806,7 +806,7 @@ public class IndicesService extends AbstractLifecycleComponent
             listener.afterIndexRemoved(indexService.index(), indexSettings, reason);
             if (reason == IndexRemovalReason.DELETED) {
                 // now we are done - try to wipe data on disk if possible
-                deleteIndexStore(extraInfo, indexService.index(), indexSettings);
+                deleteIndexStore(extraInfo, indexService.index(), indexSettings);//物理删除文件数据
             }
         } catch (Exception e) {
             logger.warn(() -> new ParameterizedMessage("failed to remove index {} ([{}][{}])", index, reason, extraInfo), e);
@@ -1390,7 +1390,7 @@ public class IndicesService extends AbstractLifecycleComponent
         BytesReference bytesReference = cacheShardLevelResult(context.indexShard(), directoryReader, request.cacheKey(),
             () -> "Shard: " + request.shardId() + "\nSource:\n" + request.source(),
             out -> {
-            queryPhase.execute(context);
+            queryPhase.execute(context);//无法从cache加载的情况。执行query
             context.queryResult().writeToNoId(out);
             loadedFromCache[0] = false;
         });

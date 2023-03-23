@@ -271,7 +271,7 @@ public class Netty4Transport extends TcpTransport {
     @Override
     protected Netty4TcpChannel initiateChannel(DiscoveryNode node) throws IOException {
         InetSocketAddress address = node.getAddress().address();
-        Bootstrap bootstrapWithHandler = clientBootstrap.clone();//每个连接均clone一个新的bootstrap
+        Bootstrap bootstrapWithHandler = clientBootstrap.clone();//每个连接均clone一个新的bootstrap，配置完全相同
         bootstrapWithHandler.handler(getClientChannelInitializer(node));
         bootstrapWithHandler.remoteAddress(address);
         ChannelFuture connectFuture = bootstrapWithHandler.connect();

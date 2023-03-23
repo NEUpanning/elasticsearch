@@ -390,7 +390,7 @@ public class AllocationService {
     public ClusterState reroute(ClusterState clusterState, String reason) {
         ClusterState fixedClusterState = adaptAutoExpandReplicas(clusterState);
 
-        RoutingNodes routingNodes = getMutableRoutingNodes(fixedClusterState);
+        RoutingNodes routingNodes = getMutableRoutingNodes(fixedClusterState);//全量构建routing nodes
         // shuffle the unassigned nodes, just so we won't have things like poison failed shards
         routingNodes.unassigned().shuffle();
         RoutingAllocation allocation = new RoutingAllocation(allocationDeciders, routingNodes, fixedClusterState,

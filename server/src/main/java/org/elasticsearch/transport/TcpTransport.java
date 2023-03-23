@@ -314,7 +314,6 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
         for (TcpChannel channel : channels) {
             channel.addConnectListener(channelsConnectedListener);
-            System.out.println(channel.getLocalAddress());
         }
 
         TimeValue connectTimeout = connectionProfile.getConnectTimeout();

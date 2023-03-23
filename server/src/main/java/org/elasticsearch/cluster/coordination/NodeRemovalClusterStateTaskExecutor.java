@@ -67,7 +67,7 @@ public class NodeRemovalClusterStateTaskExecutor implements ClusterStateTaskExec
         this.logger = logger;
     }
 
-    @Override
+    @Override//只对集群状态做节点离开集群的更改
     public ClusterTasksResult<Task> execute(final ClusterState currentState, final List<Task> tasks) throws Exception {
         final DiscoveryNodes.Builder remainingNodesBuilder = DiscoveryNodes.builder(currentState.nodes());
         boolean removed = false;

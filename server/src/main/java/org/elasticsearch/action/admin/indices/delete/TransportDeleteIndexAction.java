@@ -104,7 +104,7 @@ public class TransportDeleteIndexAction extends TransportMasterNodeAction<Delete
 
             @Override
             public void onResponse(ClusterStateUpdateResponse response) {
-                listener.onResponse(new AcknowledgedResponse(response.isAcknowledged()));
+                listener.onResponse(new AcknowledgedResponse(response.isAcknowledged()));//cluster state广播所有节点并应用返回成功，或者超时后返回失败
             }
 
             @Override

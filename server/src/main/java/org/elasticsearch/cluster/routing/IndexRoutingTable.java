@@ -69,7 +69,7 @@ public class IndexRoutingTable extends AbstractDiffable<IndexRoutingTable> imple
 
     // note, we assume that when the index routing is created, ShardRoutings are created for all possible number of
     // shards with state set to UNASSIGNED
-    private final ImmutableOpenIntMap<IndexShardRoutingTable> shards;
+    private final ImmutableOpenIntMap<IndexShardRoutingTable> shards;//shard id -> primary and replica shard
 
     private final List<ShardRouting> allActiveShards;
 

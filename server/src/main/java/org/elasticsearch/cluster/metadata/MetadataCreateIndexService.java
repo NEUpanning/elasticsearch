@@ -259,8 +259,8 @@ public class MetadataCreateIndexService {
     public void createIndex(final CreateIndexClusterStateUpdateRequest request,
                             final ActionListener<CreateIndexClusterStateUpdateResponse> listener) {
         onlyCreateIndex(request, ActionListener.wrap(response -> {
-            if (response.isAcknowledged()) {
-                activeShardsObserver.waitForActiveShards(new String[]{request.index()}, request.waitForActiveShards(), request.ackTimeout(),
+            if (response.isAcknowledged()) {//索引创建成功
+                activeShardsObserver.waitForActiveShards(new String[]{request.index()}, request.waitForActiveShards(), request.ackTimeout(),//创建索引成功后，回调等待分片分配完成并可用
                     shardsAcknowledged -> {
                         if (shardsAcknowledged == false) {
                             logger.debug("[{}] index created, but the operation timed out while waiting for " +
@@ -279,7 +279,7 @@ public class MetadataCreateIndexService {
         normalizeRequestSetting(request);
         clusterService.submitStateUpdateTask(
             "create-index [" + request.index() + "], cause [" + request.cause() + "]",
-            new AckedClusterStateUpdateTask<ClusterStateUpdateResponse>(Priority.URGENT, request, listener) {
+            new AckedClusterStateUpdateTask<ClusterStateUpdateResponse>(Priority.URGENT, request, listener) {//定义创建索引的ClusterStateUpdateTask
                 @Override
                 protected ClusterStateUpdateResponse newResponse(boolean acknowledged) {
                     return new ClusterStateUpdateResponse(acknowledged);
@@ -287,7 +287,7 @@ public class MetadataCreateIndexService {
 
                 @Override
                 public ClusterState execute(ClusterState currentState) throws Exception {
-                    return applyCreateIndexRequest(currentState, request, false);
+                    return applyCreateIndexRequest(currentState, request, false);//master线程池执行索引创建
                 }
 
                 @Override
@@ -339,7 +339,7 @@ public class MetadataCreateIndexService {
             final String name = request.dataStreamName() != null ? request.dataStreamName() : request.index();
             // Check to see if a v2 template matched
             final String v2Template = MetadataIndexTemplateService.findV2Template(currentState.metadata(),
-                name, isHiddenFromRequest == null ? false : isHiddenFromRequest);
+                name, isHiddenFromRequest == null ? false : isHiddenFromRequest);//根据索引名找到template
 
             if (v2Template != null) {
                 // If a v2 template was found, it takes precedence over all v1 templates, so create
@@ -813,7 +813,7 @@ public class MetadataCreateIndexService {
         if (metadataTransformer != null) {
             metadataTransformer.accept(builder, indexMetadata);
         }
-        Metadata newMetadata = builder.build();
+        Metadata newMetadata = builder.build();//构建新的Metadata
 
         String indexName = indexMetadata.getIndex().getName();
         ClusterBlocks.Builder blocks = createClusterBlocksBuilder(currentState, indexName, clusterBlocks);
@@ -822,7 +822,7 @@ public class MetadataCreateIndexService {
         ClusterState updatedState = ClusterState.builder(currentState).blocks(blocks).metadata(newMetadata).build();
 
         RoutingTable.Builder routingTableBuilder = RoutingTable.builder(updatedState.routingTable())
-            .addAsNew(updatedState.metadata().index(indexName));
+            .addAsNew(updatedState.metadata().index(indexName));//构建新的RoutingTable
         updatedState = ClusterState.builder(updatedState).routingTable(routingTableBuilder.build()).build();
         return rerouteRoutingTable.apply(updatedState, "index [" + indexName + "] created");
     }

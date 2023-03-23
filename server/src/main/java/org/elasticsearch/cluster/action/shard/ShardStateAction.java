@@ -561,7 +561,7 @@ public class ShardStateAction {
         private final AllocationService allocationService;
         private final Logger logger;
         private final RerouteService rerouteService;
-        private final Supplier<Priority> prioritySupplier;
+        private final Supplier<Priority> prioritySupplier;//触发的reroute任务的优先级
 
         public ShardStartedClusterStateTaskExecutor(AllocationService allocationService, RerouteService rerouteService,
                                                     Supplier<Priority> prioritySupplier, Logger logger) {
@@ -645,8 +645,8 @@ public class ShardStateAction {
         }
 
         @Override
-        public void clusterStatePublished(ClusterChangedEvent clusterChangedEvent) {
-            rerouteService.reroute("reroute after starting shards", prioritySupplier.get(), ActionListener.wrap(
+        public void clusterStatePublished(ClusterChangedEvent clusterChangedEvent) {//元数据广播完全成功后调用
+            rerouteService.reroute("reroute after starting shards", prioritySupplier.get(), ActionListener.wrap(//就是reroute操作
                 r -> logger.trace("reroute after starting shards succeeded"),
                 e -> logger.debug("reroute after starting shards failed", e)));
         }

@@ -43,7 +43,7 @@ public abstract class Publication {
 
     protected final Logger logger = LogManager.getLogger(getClass());
 
-    private final List<PublicationTarget> publicationTargets;
+    private final List<PublicationTarget> publicationTargets;//publish 的目标节点
     private final PublishRequest publishRequest;
     private final AckListener ackListener;
     private final LongSupplier currentTimeSupplier;
@@ -150,8 +150,8 @@ public abstract class Publication {
         return publishRequest.getAcceptedState();
     }
 
-    private void onPossibleCommitFailure() {
-        if (applyCommitRequest.isPresent()) {
+    private void onPossibleCommitFailure() {//判断如果不可能进入commit阶段，那么提前结束
+        if (applyCommitRequest.isPresent()) {//已经到commit阶段
             onPossibleCompletion();
             return;
         }
@@ -165,12 +165,12 @@ public abstract class Publication {
             }
         }
 
-        if (isPublishQuorum(possiblySuccessfulNodes) == false) {
+        if (isPublishQuorum(possiblySuccessfulNodes) == false) {//publish不可能有quorum的节点
             logger.debug("onPossibleCommitFailure: non-failed nodes {} do not form a quorum, so {} cannot succeed",
                 possiblySuccessfulNodes, this);
             Exception e = new FailedToCommitClusterStateException("non-failed nodes do not form a quorum");
-            publicationTargets.stream().filter(PublicationTarget::isActive).forEach(pt -> pt.setFailed(e));
-            onPossibleCompletion();
+            publicationTargets.stream().filter(PublicationTarget::isActive).forEach(pt -> pt.setFailed(e));//提前置位失败
+            onPossibleCompletion();//结束
         }
     }
 
@@ -250,14 +250,14 @@ public abstract class Publication {
         void handlePublishResponse(PublishResponse publishResponse) {
             assert isWaitingForQuorum() : this;
             logger.trace("handlePublishResponse: handling [{}] from [{}])", publishResponse, discoveryNode);
-            if (applyCommitRequest.isPresent()) {
+            if (applyCommitRequest.isPresent()) {//进入commit阶段后，直接send
                 sendApplyCommit();
             } else {
                 try {//如果确认publish的节点符合Quorum数量，发送ApplyCommitRequest。否则什么都不做
                     Publication.this.handlePublishResponse(discoveryNode, publishResponse).ifPresent(applyCommit -> {
                         assert applyCommitRequest.isPresent() == false;
                         applyCommitRequest = Optional.of(applyCommit);//标记集群状态被commit了
-                        ackListener.onCommit(TimeValue.timeValueMillis(currentTimeSupplier.getAsLong() - startTime));
+                        ackListener.onCommit(TimeValue.timeValueMillis(currentTimeSupplier.getAsLong() - startTime));//进入commit阶段触发ackListener.onCommit
                         publicationTargets.stream().filter(PublicationTarget::isWaitingForQuorum)//需要节点状态为WAITING_FOR_QUORUM。因此不会重复发送
                             .forEach(PublicationTarget::sendApplyCommit);
                     });

@@ -185,7 +185,7 @@ public class RecoverySourceHandler {
             }, shardId + " validating recovery target ["+ request.targetAllocationId() + "] registered ",
                 shard, cancellableThreads, logger);
             final Engine.HistorySource historySource;
-            if (softDeletesEnabled && (shard.useRetentionLeasesInPeerRecovery() || retentionLeaseRef.get() != null)) {
+            if (softDeletesEnabled && (shard.useRetentionLeasesInPeerRecovery() || retentionLeaseRef.get() != null)) {//一般为true。useRetentionLeasesInPeerRecovery7.4版本以后创建的索引均为true
                 historySource = Engine.HistorySource.INDEX;
             } else {
                 historySource = Engine.HistorySource.TRANSLOG;
@@ -196,7 +196,7 @@ public class RecoverySourceHandler {
             final boolean isSequenceNumberBasedRecovery //判断是否可以从SequenceNumber恢复
                 = request.startingSeqNo() != SequenceNumbers.UNASSIGNED_SEQ_NO
                 && isTargetSameHistory()
-                && shard.hasCompleteHistoryOperations("peer-recovery", historySource, request.startingSeqNo())//检查是否有需要的所有历史记录（Lucene（retention lease）或者translog）
+                && shard.hasCompleteHistoryOperations("peer-recovery", historySource, request.startingSeqNo())//检查是否有需要的所有历史记录（Lucene（retention lease）或者translog取决于historySource）
                 && (historySource == Engine.HistorySource.TRANSLOG ||
                    (retentionLeaseRef.get() != null && retentionLeaseRef.get().retainingSequenceNumber() <= request.startingSeqNo()));//retention lease是否包含replica没有的数据
             // NB check hasCompleteHistoryOperations when computing isSequenceNumberBasedRecovery, even if there is a retention lease,
@@ -307,7 +307,7 @@ public class RecoverySourceHandler {
                  * make sure to do this before sampling the max sequence number in the next step, to ensure that we send
                  * all documents up to maxSeqNo in phase2.
                  */
-                runUnderPrimaryPermit(() -> shard.initiateTracking(request.targetAllocationId()),
+                runUnderPrimaryPermit(() -> shard.initiateTracking(request.targetAllocationId()),// 标记副本分片可以接受写入请求
                     shardId + " initiating tracking of " + request.targetAllocationId(), shard, cancellableThreads, logger);
 
                 final long endingSeqNo = shard.seqNoStats().getMaxSeqNo();
@@ -816,7 +816,7 @@ public class RecoverySourceHandler {
          * the permit then the state of the shard will be relocated and this recovery will fail.
          */
         runUnderPrimaryPermit(() -> shard.markAllocationIdAsInSync(request.targetAllocationId(), targetLocalCheckpoint),
-            shardId + " marking " + request.targetAllocationId() + " as in sync", shard, cancellableThreads, logger);
+            shardId + " marking " + request.targetAllocationId() + " as in sync", shard, cancellableThreads, logger);//标记副本为In sync
         final long globalCheckpoint = shard.getLastKnownGlobalCheckpoint(); // this global checkpoint is persisted in finalizeRecovery
         final StepListener<Void> finalizeListener = new StepListener<>();
         cancellableThreads.checkForCancel();

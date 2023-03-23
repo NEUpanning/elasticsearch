@@ -119,9 +119,9 @@ public class MetadataDeleteIndexService {
         Metadata.Builder metadataBuilder = Metadata.builder(meta);
         ClusterBlocks.Builder clusterBlocksBuilder = ClusterBlocks.builder().blocks(currentState.blocks());
 
-        final IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder(metadataBuilder.indexGraveyard());
+        final IndexGraveyard.Builder graveyardBuilder = IndexGraveyard.builder(metadataBuilder.indexGraveyard());//索引墓碑聚合
         final int previousGraveyardSize = graveyardBuilder.tombstones().size();
-        for (final Index index : indices) {
+        for (final Index index : indices) {//将索引从集群状态删除
             String indexName = index.getName();
             logger.info("{} deleting index", index);
             routingTableBuilder.remove(indexName);

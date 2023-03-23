@@ -285,7 +285,7 @@ public class InternalClusterInfoService implements ClusterInfoService, LocalNode
     }
 
     /**
-     * Refreshes the ClusterInfo in a blocking fashion
+     * Refreshes the ClusterInfo in a blocking fashion包含一些定时refresh的节点信息
      */
     public final ClusterInfo refresh() {
         if (logger.isTraceEnabled()) {

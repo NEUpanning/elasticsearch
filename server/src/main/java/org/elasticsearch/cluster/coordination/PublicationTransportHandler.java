@@ -189,7 +189,7 @@ public class PublicationTransportHandler {
                     ClusterState incomingState;
                     try {
                         Diff<ClusterState> diff = ClusterState.readDiffFrom(in, lastSeen.nodes().getLocalNode());
-                        incomingState = diff.apply(lastSeen); // might throw IncompatibleClusterStateVersionException
+                        incomingState = diff.apply(lastSeen); // might throw IncompatibleClusterStateVersionException 根据last clusterstate和diff构建cluster state
                     } catch (IncompatibleClusterStateVersionException e) {
                         incompatibleClusterStateDiffReceivedCount.incrementAndGet();
                         throw e;

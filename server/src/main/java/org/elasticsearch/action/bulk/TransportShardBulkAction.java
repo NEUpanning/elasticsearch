@@ -117,7 +117,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
             (update, shardId, type, mappingListener) -> {
                 assert update != null;
                 assert shardId != null;
-                mappingUpdatedAction.updateMappingOnMaster(shardId.getIndex(), type, update, mappingListener);
+                mappingUpdatedAction.updateMappingOnMaster(shardId.getIndex(), type, update, mappingListener);//更新mapping的方法，如果有新的字段会触发更新
             },
             mappingUpdateListener -> observer.waitForNextChange(new ClusterStateObserver.Listener() {
                 @Override
@@ -162,7 +162,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
             protected void doRun() throws Exception {
                 while (context.hasMoreOperationsToExecute()) {
                     if (executeBulkItemRequest(context, updateHelper, nowInMillisSupplier, mappingUpdater, waitForMappingUpdate,
-                        ActionListener.wrap(v -> executor.execute(this), this::onRejection)) == false) {
+                        ActionListener.wrap(v -> executor.execute(this), this::onRejection)) == false) {//最后一个listener用于等待更新mapping后继续执行写入
                         // We are waiting for a mapping update on another thread, that will invoke this action again once its done
                         // so we just break out here.
                         return;
@@ -287,7 +287,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 return true;
             }
 
-            mappingUpdater.updateMappings(result.getRequiredMappingUpdate(), primary.shardId(),
+            mappingUpdater.updateMappings(result.getRequiredMappingUpdate(), primary.shardId(),//更新mapping
                 context.getRequestToExecute().type(),
                 new ActionListener<Void>() {
                     @Override
@@ -305,7 +305,7 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                                 public void onFailure(Exception e) {
                                     context.failOnMappingUpdate(e);
                                 }
-                            }, () -> itemDoneListener.onResponse(null))
+                            }, () -> itemDoneListener.onResponse(null))//等待更新mapping成功后，触发itemDoneListener，再循环一次该流程
                         );
                     }
 

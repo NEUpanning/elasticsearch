@@ -253,7 +253,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
             // term and therefore never removed the NO_MASTER_BLOCK for this term. This logic ensures that we quickly turn a node
             // into follower, even before receiving the first cluster state update, but also don't have to deal with the situation
             // where we would possibly have to remove the NO_MASTER_BLOCK from the applierState when turning a candidate back to follower.
-            if (getLastAcceptedState().term() < getCurrentTerm()) {
+            if (getLastAcceptedState().term() < getCurrentTerm()) {//节点还没commit新的cluster state，快速成为follower
                 becomeFollower("onFollowerCheckRequest", followerCheckRequest.getSender());
             } else if (mode == Mode.FOLLOWER) {
                 logger.trace("onFollowerCheckRequest: responding successfully to {}", followerCheckRequest);
@@ -447,7 +447,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
     private Optional<Join> ensureTermAtLeast(DiscoveryNode sourceNode, long targetTerm) {
         assert Thread.holdsLock(mutex) : "Coordinator mutex not held";
         if (getCurrentTerm() < targetTerm) {
-            return Optional.of(joinLeaderInTerm(new StartJoinRequest(sourceNode, targetTerm)));
+            return Optional.of(joinLeaderInTerm(new StartJoinRequest(sourceNode, targetTerm)));//加入该节点集群
         }
         return Optional.empty();
     }
@@ -1397,7 +1397,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                     assert receivedJoinsProcessed == false;
                     receivedJoinsProcessed = true;
 
-                    clusterApplier.onNewClusterState(CoordinatorPublication.this.toString(), () -> applierState,//master节点触发clusterApplierService
+                    clusterApplier.onNewClusterState(CoordinatorPublication.this.toString(), () -> applierState,//master节点触发clusterApplierService，应用集群状态
                         new ClusterApplyListener() {
                             @Override
                             public void onFailure(String source, Exception e) {
@@ -1453,7 +1453,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                                 }
                                 cancelTimeoutHandlers();//取消监控超时的handler
                                 ackListener.onNodeAck(getLocalNode(), null);
-                                publishListener.onResponse(null);
+                                publishListener.onResponse(null);//publish成功，MasterService#publish的阻塞等待释放
                             }
                         });
                 }

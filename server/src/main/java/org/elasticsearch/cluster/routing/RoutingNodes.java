@@ -650,8 +650,8 @@ public class RoutingNodes implements Iterable<RoutingNode> {
             }
         }
         removeRecovery(shard);
-        ShardRouting startedShard = shard.moveToStarted();
-        updateAssigned(shard, startedShard);
+        ShardRouting startedShard = shard.moveToStarted();//实例化个新的
+        updateAssigned(shard, startedShard);//更新routing node保存的shard相关数据结构
         return startedShard;
     }
 

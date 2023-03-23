@@ -27,9 +27,9 @@ import java.util.List;
 
 /**
  * A task that can update the cluster state.
- * 如果子类实现了execute(ClusterState currentState, List<T> tasks)，则按照子类的方法执行，批量执行任务
- * 否则，批量任务只执行第一个，剩余的标记为成功。相当于去重
  */
+//如果子类实现了execute(ClusterState currentState, List<T> tasks)，则按照子类的方法执行，批量执行任务
+// * 否则，批量任务只执行第一个，剩余的标记为成功。相当于去重
 public abstract class ClusterStateUpdateTask
         implements ClusterStateTaskConfig, ClusterStateTaskExecutor<ClusterStateUpdateTask>, ClusterStateTaskListener {
 

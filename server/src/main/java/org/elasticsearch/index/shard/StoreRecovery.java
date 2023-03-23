@@ -89,7 +89,7 @@ final class StoreRecovery {
      * @see Store
      */
     void recoverFromStore(final IndexShard indexShard, ActionListener<Boolean> listener) {
-        if (canRecover(indexShard)) {
+        if (canRecover(indexShard)) {//检查是否为primary，索引是否close
             RecoverySource.Type recoveryType = indexShard.recoveryState().getRecoverySource().getType();
             assert recoveryType == RecoverySource.Type.EMPTY_STORE || recoveryType == RecoverySource.Type.EXISTING_STORE :
                 "expected store recovery type but was: " + recoveryType;
@@ -381,7 +381,7 @@ final class StoreRecovery {
             try {
                 store.failIfCorrupted();
                 try {
-                    si = store.readLastCommittedSegmentsInfo();
+                    si = store.readLastCommittedSegmentsInfo();//最后一个提交点的segments info
                 } catch (Exception e) {
                     String files = "_unknown_";
                     try {
@@ -418,13 +418,13 @@ final class StoreRecovery {
                 final RecoveryState.Index index = recoveryState.getIndex();
                 try {
                     if (si != null) {
-                        addRecoveredFileDetails(si, store, index);
+                        addRecoveredFileDetails(si, store, index);//保存segments文件名和length到RecoveryState.Index
                     }
                 } catch (IOException e) {
                     logger.debug("failed to list file details", e);
                 }
                 index.setFileDetailsComplete();
-            } else {
+            } else {//EMPTY_STORE会创建些需要的文件
                 store.createEmpty(indexShard.indexSettings().getIndexVersionCreated().luceneVersion);
                 final String translogUUID = Translog.createEmptyTranslog(
                     indexShard.shardPath().resolveTranslog(), SequenceNumbers.NO_OPS_PERFORMED, shardId,
