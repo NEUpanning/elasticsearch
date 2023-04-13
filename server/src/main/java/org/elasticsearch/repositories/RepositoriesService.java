@@ -291,7 +291,7 @@ public class RepositoriesService extends AbstractLifecycleComponent implements C
     /**
      * Checks if new repositories appeared in or disappeared from cluster metadata and updates current list of
      * repositories accordingly.
-     *
+     *线上没用snapshat,方法不耗时
      * @param event cluster changed event
      */
     @Override

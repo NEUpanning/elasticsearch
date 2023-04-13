@@ -239,7 +239,7 @@ public abstract class TransportWriteAction<
                     public void onFailure(Exception ex) {
                         listener.onFailure(ex);
                     }
-                }, logger).run();
+                }, logger).run();//调度异步flush(lucene fsync)操作，若配置则translog同步落盘
             }
         }
     }
@@ -379,7 +379,7 @@ public abstract class TransportWriteAction<
              * refresh), or we there are past async operations and we wait for them to return to
              * respond.
              */
-            indexShard.afterWriteOperation();
+            indexShard.afterWriteOperation();//调度异步flush(lucene fsync)操作
             // decrement pending by one, if there is nothing else to do we just respond with success
             maybeFinish();
             if (waitUntilRefresh) {
@@ -394,9 +394,9 @@ public abstract class TransportWriteAction<
                     maybeFinish();
                 });
             }
-            if (sync) {
+            if (sync) {// translog 是否为同步落盘
                 assert pendingOps.get() > 0;
-                indexShard.sync(location, (ex) -> {
+                indexShard.sync(location, (ex) -> {//translog落盘
                     syncFailure.set(ex);
                     maybeFinish();
                 });

@@ -115,6 +115,7 @@ public class TransportNodesListGatewayStartedShards extends
     @Override
     protected NodeGatewayStartedShards nodeOperation(NodeRequest request) {
         try {
+            long start = System.nanoTime();
             final ShardId shardId = request.getShardId();
             logger.trace("{} loading local shard state info", shardId);
             ShardStateMetadata shardStateMetadata = ShardStateMetadata.FORMAT.loadLatestState(logger, namedXContentRegistry,
@@ -160,6 +161,8 @@ public class TransportNodesListGatewayStartedShards extends
                 logger.debug("{} shard state info found: [{}]", shardId, shardStateMetadata);
                 String allocationId = shardStateMetadata.allocationId != null ?
                     shardStateMetadata.allocationId.getId() : null;
+                long end = System.nanoTime();
+                logger.info("index {} cost time {}", request.shardId.getIndex().getName(), (end-start)/1000000);
                 return new NodeGatewayStartedShards(clusterService.localNode(), allocationId, shardStateMetadata.primary);
             }
             logger.trace("{} no local shard info found", shardId);

@@ -49,12 +49,12 @@ public class LocalCheckpointTracker {
     final LongObjectHashMap<CountedBitSet> persistedSeqNo = new LongObjectHashMap<>();
 
     /**
-     * The current local checkpoint, i.e., all sequence numbers no more than this number have been processed.
+     * The current local checkpoint, i.e., all sequence numbers no more than this number have been processed. index完成触发advance
      */
     final AtomicLong processedCheckpoint = new AtomicLong();
 
     /**
-     * The current persisted local checkpoint, i.e., all sequence numbers no more than this number have been durably persisted.
+     * The current persisted local checkpoint, i.e., all sequence numbers no more than this number have been durably persisted. translog落盘触发advance
      */
     final AtomicLong persistedCheckpoint = new AtomicLong();
 

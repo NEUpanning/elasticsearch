@@ -31,7 +31,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
+//该指标统计的是primary和replica真正进行写入时的指标，InternalEngine.index方法。不包含排队时间
 public class IndexingStats implements Writeable, ToXContentFragment {
 
     public static class Stats implements Writeable, ToXContentFragment {

@@ -105,7 +105,7 @@ final class IndexShardOperationPermits implements Closeable {
             final TimeUnit timeUnit,
             final CheckedRunnable<E> onBlocked) throws InterruptedException, TimeoutException, E {
         delayOperations();
-        try (Releasable ignored = acquireAll(timeout, timeUnit)) {
+        try (Releasable ignored = acquireAll(timeout, timeUnit)) {//获取所有的信号量，会等待ongoing operation 完成
             onBlocked.run();
         } finally {
             releaseDelayedOperations();

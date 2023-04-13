@@ -72,7 +72,7 @@ public final class AutoCreateIndex {
         }
         // One volatile read, so that all checks are done against the same instance:
         final AutoCreate autoCreate = this.autoCreate;
-        if (autoCreate.autoCreateIndex == false) {
+        if (autoCreate.autoCreateIndex == false) {//关闭autoCreateIndex或dynamicMapping则无法自动创建索引
             throw new IndexNotFoundException("[" + AUTO_CREATE_INDEX_SETTING.getKey() + "] is [false]", index);
         }
         if (dynamicMappingDisabled) {
@@ -83,7 +83,7 @@ public final class AutoCreateIndex {
         if (autoCreate.expressions.isEmpty()) {
             return true;
         }
-        for (Tuple<String, Boolean> expression : autoCreate.expressions) {
+        for (Tuple<String, Boolean> expression : autoCreate.expressions) {//正则匹配判断
             String indexExpression = expression.v1();
             boolean include = expression.v2();
             if (Regex.simpleMatch(indexExpression, index)) {

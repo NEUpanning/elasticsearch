@@ -118,7 +118,7 @@ public class ReplicationOperation<
         }
 
         totalShards.incrementAndGet();
-        pendingActions.incrementAndGet(); // increase by 1 until we finish all primary coordination
+        pendingActions.incrementAndGet(); // increase by 1 until we finish all primary coordination  primary 写入开始，增加pendingActions
         primary.perform(request, ActionListener.wrap(this::handlePrimaryResult, resultListener::onFailure));
     }
 
@@ -153,7 +153,7 @@ public class ReplicationOperation<
             public void onResponse(Void aVoid) {
                 successfulShards.incrementAndGet();
                 try {
-                    updateCheckPoints(primary.routingEntry(), primary::localCheckpoint, primary::globalCheckpoint);
+                    updateCheckPoints(primary.routingEntry(), primary::localCheckpoint, primary::globalCheckpoint);//更新ReplicationTracker包括local和globalpoint。primary引用的LocalCheckpointTracker为engine保存,用于持久化和推进localcheckpoint的,replication用于跟踪replica group的所有ckp
                 } finally {
                     decPendingAndFinishIfNeeded();
                 }
@@ -201,13 +201,13 @@ public class ReplicationOperation<
             logger.trace("[{}] sending op [{}] to replica {} for request [{}]", shard.shardId(), opType, shard, replicaRequest);
         }
         totalShards.incrementAndGet();
-        pendingActions.incrementAndGet();
+        pendingActions.incrementAndGet();//replica 写入开始，增加pendingActions
         final ActionListener<ReplicaResponse> replicationListener = new ActionListener<ReplicaResponse>() {
             @Override
             public void onResponse(ReplicaResponse response) {
                 successfulShards.incrementAndGet();
                 try {
-                    updateCheckPoints(shard, response::localCheckpoint, response::globalCheckpoint);// 更新主分片上记录的Checkpoint。以及全局globalcheckpoint
+                    updateCheckPoints(shard, response::localCheckpoint, response::globalCheckpoint);// 更新主分片上记录的该replica的Checkpoint。以及全局globalcheckpoint
                 } finally {
                     decPendingAndFinishIfNeeded();// replica均返回时进行finish
                 }

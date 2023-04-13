@@ -121,7 +121,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-//一个engine对应一个shard
+//一个engine对应一个shard。每次写入都用这个
 public class InternalEngine extends Engine {
 
     /**
@@ -926,7 +926,7 @@ public class InternalEngine extends Engine {
                             advanceMaxSeqNoOfUpdatesOrDeletesOnPrimary(index.seqNo());
                         }
                     } else {
-                        markSeqNoAsSeen(index.seqNo()); //副本将seq no和primary保持一致
+                        markSeqNoAsSeen(index.seqNo()); //副本标记localCheckpoint nextSeqNo为seq no
                     }
 
                     assert index.seqNo() >= 0 : "ops should have an assigned seq no.; origin: " + index.origin();
@@ -957,7 +957,7 @@ public class InternalEngine extends Engine {
                     versionMap.maybePutIndexUnderLock(index.uid().bytes(),
                         new IndexVersionValue(translogLocation, plan.versionForIndexing, index.seqNo(), index.primaryTerm()));
                 }
-                localCheckpointTracker.markSeqNoAsProcessed(indexResult.getSeqNo());//将提供的seq no标记为Processed，并在可能的情况下更新Processed的检查点。
+                localCheckpointTracker.markSeqNoAsProcessed(indexResult.getSeqNo());//将该doc的seq no标记为Processed，更新内存的local checkpoint。当translog flush之后，更新persist translog TranslogWriter 382行
                 if (indexResult.getTranslogLocation() == null) {
                     // the op is coming from the translog (and is hence persisted already) or it does not have a sequence number
                     assert index.origin().isFromTranslog() || indexResult.getSeqNo() == SequenceNumbers.UNASSIGNED_SEQ_NO;
@@ -1721,7 +1721,7 @@ public class InternalEngine extends Engine {
         final long translogGenerationOfLastCommit =
             translog.getMinGenerationForSeqNo(localCheckpointOfLastCommit + 1).translogFileGeneration;
         final long flushThreshold = config().getIndexSettings().getFlushThresholdSize().getBytes();
-        if (translog.sizeInBytesByMinGen(translogGenerationOfLastCommit) < flushThreshold) {
+        if (translog.sizeInBytesByMinGen(translogGenerationOfLastCommit) < flushThreshold) {//大小不够则不flush
             return false;
         }
         /*

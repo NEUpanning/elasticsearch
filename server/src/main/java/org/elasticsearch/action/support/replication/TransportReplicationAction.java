@@ -334,16 +334,16 @@ public abstract class TransportReplicationAction<
                 throw new ReplicationOperation.RetryOnPrimaryException(shardId, "actual shard is not a primary " + shardRouting);
             }
             final String actualAllocationId = shardRouting.allocationId().getId();
-            if (actualAllocationId.equals(primaryRequest.getTargetAllocationID()) == false) {
+            if (actualAllocationId.equals(primaryRequest.getTargetAllocationID()) == false) {//校验allocation id，不一致则失败
                 throw new ShardNotFoundException(shardId, "expected allocation id [{}] but found [{}]",
                     primaryRequest.getTargetAllocationID(), actualAllocationId);
             }
             final long actualTerm = indexShard.getPendingPrimaryTerm();
-            if (actualTerm != primaryRequest.getPrimaryTerm()) {
+            if (actualTerm != primaryRequest.getPrimaryTerm()) {//校验primary term ，不一致则失败
                 throw new ShardNotFoundException(shardId, "expected allocation id [{}] with term [{}] but found [{}]",
                     primaryRequest.getTargetAllocationID(), primaryRequest.getPrimaryTerm(), actualTerm);
             }
-            // 检查当前是否有阻塞的操作，有的话，就缓存起来，等后面阻塞的操作完成后再执行。阻塞操作：peer recovery中的节点变为relocate状态
+            // 检查当前是否有阻塞的操作，有的话，就缓存起来，等后面阻塞的操作完成后再执行。阻塞操作：primary relocated #15900 , replica promotion
             acquirePrimaryOperationPermit(
                     indexShard,
                     primaryRequest.getRequest(),
@@ -369,7 +369,7 @@ public abstract class TransportReplicationAction<
                     throw blockException;
                 }
 
-                if (primaryShardReference.isRelocated()) {//检查主分片是否已经迁移完成，如果迁移完成将请求路由给目标节点
+                if (primaryShardReference.isRelocated()) {//检查主分片是否已经迁移完成，如果迁移完成将请求路由给目标节点 #15900
                     primaryShardReference.close(); // release shard operation lock as soon as possible
                     setPhase(replicationTask, "primary_delegation");
                     // delegate primary phase to relocation target
@@ -397,7 +397,7 @@ public abstract class TransportReplicationAction<
                         });
                 } else {
                     setPhase(replicationTask, "primary");
-                    //写入操作在primary和replica完成时触发
+                    //当写入操作在primary和replica完成时触发
                     final ActionListener<Response> responseListener = ActionListener.wrap(response -> {
                         adaptResponse(response, primaryShardReference.indexShard);
 
@@ -519,7 +519,7 @@ public abstract class TransportReplicationAction<
 
     protected void handleReplicaRequest(final ConcreteReplicaRequest<ReplicaRequest> replicaRequest, final TransportChannel channel,
                                         final Task task) {
-        Releasable releasable = checkReplicaLimits(replicaRequest.getRequest());
+        Releasable releasable = checkReplicaLimits(replicaRequest.getRequest());//没用
         ActionListener<ReplicaResponse> listener =
             ActionListener.runBefore(new ChannelActionListener<>(channel, transportReplicaAction, replicaRequest), releasable::close);
 
@@ -737,10 +737,10 @@ public abstract class TransportReplicationAction<
                     "request waitForActiveShards must be set in resolveRequest";
 
                 final ShardRouting primary = state.getRoutingTable().shardRoutingTable(request.shardId()).primaryShard();
-                if (primary == null || primary.active() == false) {//重试等待primary可用直到超时，比如缺失primary shard就是不可用
+                if (primary == null || primary.active() == false) {//异步等待primary可用直到超时，比如缺失primary shard就是不可用
                     logger.trace("primary shard [{}] is not yet active, scheduling a retry: action [{}], request [{}], "
                         + "cluster state version [{}]", request.shardId(), actionName, request, state.version());
-                    retryBecauseUnavailable(request.shardId(), "primary shard is not active");
+                    retryBecauseUnavailable(request.shardId(), "primary shard is not active");//实现方法是向clusterApplierService注册一个listener，当集群状态变更时检查primary是否可用，可用则再次执行ReroutePhase#doRun
                     return;
                 }
                 if (state.nodes().nodeExists(primary.currentNodeId()) == false) {
@@ -844,7 +844,7 @@ public abstract class TransportReplicationAction<
             observer.waitForNextChange(new ClusterStateObserver.Listener() {
                 @Override
                 public void onNewClusterState(ClusterState state) {
-                    run();
+                    run();//执行的是reroutePhase的dorun，重试写入
                 }
 
                 @Override

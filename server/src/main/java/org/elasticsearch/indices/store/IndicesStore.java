@@ -120,7 +120,7 @@ public class IndicesStore implements ClusterStateListener, Closeable {
     }
 
     @Override
-    public void clusterChanged(ClusterChangedEvent event) {
+    public void clusterChanged(ClusterChangedEvent event) {//清除不在该节点的但仍有文件的shard。需要遍历所有索引和分片，可能比较耗时
         if (!event.routingTableChanged()) {
             return;
         }
@@ -148,7 +148,7 @@ public class IndicesStore implements ClusterStateListener, Closeable {
             // Note, closed indices will not have any routing information, so won't be deleted
             for (IndexShardRoutingTable indexShardRoutingTable : indexRoutingTable) {
                 ShardId shardId = indexShardRoutingTable.shardId();
-                if (folderNotFoundCache.contains(shardId) == false && shardCanBeDeleted(localNodeId, indexShardRoutingTable)) {
+                if (folderNotFoundCache.contains(shardId) == false && shardCanBeDeleted(localNodeId, indexShardRoutingTable)) {//不在列表中的会跳过
                     IndexService indexService = indicesService.indexService(indexRoutingTable.getIndex());
                     final IndexSettings indexSettings;
                     if (indexService == null) {

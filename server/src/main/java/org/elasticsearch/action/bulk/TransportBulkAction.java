@@ -243,7 +243,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     shouldAutoCreate = shouldAutoCreate(index, state);//判断是否应该自动创建
                 } catch (IndexNotFoundException e) {
                     shouldAutoCreate = false;
-                    indicesThatCannotBeCreated.put(index, e);
+                    indicesThatCannotBeCreated.put(index, e);//由于关闭autoCreateIndex或dynamicMapping而无法自动创建的索引
                 }
                 if (shouldAutoCreate) {
                     autoCreateIndices.add(index);
@@ -256,7 +256,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 final AtomicInteger counter = new AtomicInteger(autoCreateIndices.size());
                 for (String index : autoCreateIndices) {
                     createIndex(index, bulkRequest.timeout(), minNodeVersion,
-                        new ActionListener<CreateIndexResponse>() {//并发创建索引
+                        new ActionListener<CreateIndexResponse>() {//异步并发创建索引
                         @Override
                         public void onResponse(CreateIndexResponse result) {
                             if (counter.decrementAndGet() == 0) {//当所有索引创建完成时，执行bulk
@@ -429,9 +429,9 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                             IndexRequest indexRequest = (IndexRequest) docWriteRequest;
                             final IndexMetadata indexMetadata = metadata.index(concreteIndex);
                             MappingMetadata mappingMd = indexMetadata.mappingOrDefault();
-                            Version indexCreated = indexMetadata.getCreationVersion();
+                            Version indexCreated = indexMetadata.getCreationVersion();//索引版本用于向后兼容
                             indexRequest.resolveRouting(metadata);//配置routing
-                            indexRequest.process(indexCreated, mappingMd, concreteIndex.getName());//为doc生成ID
+                            indexRequest.process(indexCreated, mappingMd, concreteIndex.getName());//为doc生成ID和时间戳
                             break;
                         case UPDATE:
                             TransportUpdateAction.resolveAndValidateRouting(metadata, concreteIndex.getName(),
@@ -482,11 +482,11 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 final ShardId shardId = entry.getKey();
                 final List<BulkItemRequest> requests = entry.getValue();
                 BulkShardRequest bulkShardRequest = new BulkShardRequest(shardId, bulkRequest.getRefreshPolicy(),
-                        requests.toArray(new BulkItemRequest[requests.size()]));
-                bulkShardRequest.waitForActiveShards(bulkRequest.waitForActiveShards());
+                        requests.toArray(new BulkItemRequest[requests.size()]));//BulkShardRequest用于BulkShardAction处理。RefreshPolicy指的是数据写入后的refresh策略
+                bulkShardRequest.waitForActiveShards(bulkRequest.waitForActiveShards());//配置写入前需要等的可用分片数，默认1
                 bulkShardRequest.timeout(bulkRequest.timeout());
                 bulkShardRequest.routedBasedOnClusterVersion(clusterState.version());
-                if (task != null) {
+                if (task != null) {// bulk write时肯定为true
                     bulkShardRequest.setParentTask(nodeId, task.getId());
                 }//发往同个shard的request异步转发
                 shardBulkAction.execute(bulkShardRequest, new ActionListener<BulkShardResponse>() {
@@ -499,7 +499,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                             }
                             responses.set(bulkItemResponse.getItemId(), bulkItemResponse);
                         }
-                        if (counter.decrementAndGet() == 0) {
+                        if (counter.decrementAndGet() == 0) {//所有request返回
                             finishHim();
                         }
                     }
@@ -519,12 +519,12 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     }
 
                     private void finishHim() {
-                        listener.onResponse(new BulkResponse(responses.toArray(new BulkItemResponse[responses.length()]),
+                        listener.onResponse(new BulkResponse(responses.toArray(new BulkItemResponse[responses.length()]),//返回结果
                             buildTookInMillis(startTimeNanos)));
                     }
                 });
             }
-            bulkRequest = null; // allow memory for bulk request items to be reclaimed before all items have been completed
+            bulkRequest = null; // allow memory for bulk request items to be reclaimed before all items have been completed因为bulkshardrequest发出去了这个就没用了
         }
 
         private boolean handleBlockExceptions(ClusterState state) {
@@ -609,7 +609,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
     private static class ConcreteIndices  {
         private final ClusterState state;
         private final IndexNameExpressionResolver indexNameExpressionResolver;
-        private final Map<String, Index> indices = new HashMap<>();
+        private final Map<String, Index> indices = new HashMap<>();//保存request.index(), concreteIndex
 
         ConcreteIndices(ClusterState state, IndexNameExpressionResolver indexNameExpressionResolver) {
             this.state = state;
@@ -626,7 +626,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 boolean includeDataStreams = request.opType() == DocWriteRequest.OpType.CREATE;
                 try {
                     concreteIndex = indexNameExpressionResolver.concreteWriteIndex(state, request.indicesOptions(),
-                        request.indices()[0], false, includeDataStreams);
+                        request.indices()[0], false, includeDataStreams);//如果用的表达式，则解析出真正的索引
                 } catch (IndexNotFoundException e) {
                     if (includeDataStreams == false && e.getMetadataKeys().contains(EXCLUDED_DATA_STREAMS_KEY)) {
                         throw new IllegalArgumentException("only write ops with an op_type of create are allowed in data streams");

@@ -68,7 +68,7 @@ import java.util.stream.StreamSupport;
 
 /**
  * This class is responsible for tracking the replication group with its progress and safety markers (local and global checkpoints).
- *
+ *保存分片组的checkpoint
  * The global checkpoint is the highest sequence number for which all lower (or equal) sequence number have been processed
  * on all shards that are currently active. Since shards count as "active" when the master starts
  * them, and before this primary shard has been notified of this fact, we also include shards that have completed recovery. These shards
@@ -148,7 +148,7 @@ public class ReplicationTracker extends AbstractIndexShardComponent implements L
     /**
      * Local checkpoint information for all shard copies that are tracked. Has an entry for all shard copies that are either initializing
      * and / or in-sync, possibly also containing information about unassigned in-sync shard copies. The information that is tracked for
-     * each shard copy is explained in the docs for the {@link CheckpointState} class.
+     * each shard copy is explained in the docs for the {@link CheckpointState} class.只有primary保存
      */
     final Map<String, CheckpointState> checkpoints;
 
