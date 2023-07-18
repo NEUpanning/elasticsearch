@@ -99,12 +99,12 @@ public class FetchPhase implements SearchPhase {
 
         final FieldsVisitor fieldsVisitor;
         Map<String, Set<String>> storedToRequestedFields = new HashMap<>();
-        StoredFieldsContext storedFieldsContext = context.storedFieldsContext();
+        StoredFieldsContext storedFieldsContext = context.storedFieldsContext();//用于StoredFields功能，可见https://blog.csdn.net/m0_45406092/article/details/107631883
 
         if (storedFieldsContext == null) {
             // no fields specified, default to return source if no explicit indication
             if (!context.hasScriptFields() && !context.hasFetchSourceContext()) {
-                context.fetchSourceContext(new FetchSourceContext(true));
+                context.fetchSourceContext(new FetchSourceContext(true));// 需要拉取_source字段
             }
             fieldsVisitor = new FieldsVisitor(context.sourceRequested());
         } else if (storedFieldsContext.fetchFields() == false) {
@@ -149,19 +149,19 @@ public class FetchPhase implements SearchPhase {
             for (int index = 0; index < context.docIdsToLoadSize(); index++) {
                 docs[index] = new DocIdToIndex(context.docIdsToLoad()[context.docIdsToLoadFrom() + index], index);
             }
-            Arrays.sort(docs);
+            Arrays.sort(docs);// 按lucene doc id(不是es 的doc id)排序
 
             SearchHit[] hits = new SearchHit[context.docIdsToLoadSize()];
             SearchHit[] sortedHits = new SearchHit[context.docIdsToLoadSize()];
             FetchSubPhase.HitContext hitContext = new FetchSubPhase.HitContext();
-            for (int index = 0; index < context.docIdsToLoadSize(); index++) {
+            for (int index = 0; index < context.docIdsToLoadSize(); index++) {// 遍历查询所有的doc id
                 if (context.isCancelled()) {
                     throw new TaskCancelledException("cancelled");
                 }
-                int docId = docs[index].docId;
-                int readerIndex = ReaderUtil.subIndex(docId, context.searcher().getIndexReader().leaves());
+                int docId = docs[index].docId;// doc在外部呈现的docId
+                int readerIndex = ReaderUtil.subIndex(docId, context.searcher().getIndexReader().leaves());// 查找这个docId在哪个Segment上面
                 LeafReaderContext subReaderContext = context.searcher().getIndexReader().leaves().get(readerIndex);
-                int subDocId = docId - subReaderContext.docBase;
+                int subDocId = docId - subReaderContext.docBase;// 计算出这个docId在当前segment上的doc编号
 
                 final SearchHit searchHit;
                 int rootDocId = findRootDocumentIfNested(context, subReaderContext, subDocId);
@@ -170,13 +170,13 @@ public class FetchPhase implements SearchPhase {
                         storedToRequestedFields, subReaderContext);
                 } else {
                     searchHit = createSearchHit(context, fieldsVisitor, docId, subDocId,
-                        storedToRequestedFields, subReaderContext);
+                        storedToRequestedFields, subReaderContext);// 调用Lucene读取source
                 }
 
                 sortedHits[index] = searchHit;
                 hits[docs[index].index] = searchHit;
                 hitContext.reset(searchHit, subReaderContext, subDocId, context.searcher());
-                for (FetchSubPhase fetchSubPhase : fetchSubPhases) {
+                for (FetchSubPhase fetchSubPhase : fetchSubPhases) {// 执行hit级别的fetch的子阶段,例如HighlightPhase
                     fetchSubPhase.hitExecute(context, hitContext);
                 }
             }
@@ -184,7 +184,7 @@ public class FetchPhase implements SearchPhase {
                 throw new TaskCancelledException("cancelled");
             }
 
-            for (FetchSubPhase fetchSubPhase : fetchSubPhases) {
+            for (FetchSubPhase fetchSubPhase : fetchSubPhases) {// 执行hits级别的fetch的子阶段
                 fetchSubPhase.hitsExecute(context, sortedHits);
                 if (context.isCancelled()) {
                     throw new TaskCancelledException("cancelled");
@@ -192,7 +192,7 @@ public class FetchPhase implements SearchPhase {
             }
 
             TotalHits totalHits = context.queryResult().getTotalHits();
-            context.fetchResult().hits(new SearchHits(hits, totalHits, context.queryResult().getMaxScore()));
+            context.fetchResult().hits(new SearchHits(hits, totalHits, context.queryResult().getMaxScore()));// 保存结果到context
         } catch (IOException e) {
             throw ExceptionsHelper.convertToElastic(e);
         }
@@ -236,7 +236,7 @@ public class FetchPhase implements SearchPhase {
         if (fieldsVisitor == null) {
             return new SearchHit(docId, null, typeText, null, null);
         }
-        loadStoredFields(context.shardTarget(), subReaderContext, fieldsVisitor, subDocId);
+        loadStoredFields(context.shardTarget(), subReaderContext, fieldsVisitor, subDocId);// 从Lucene中读取source
         fieldsVisitor.postProcess(context.mapperService());
         SearchHit searchHit;
         if (fieldsVisitor.fields().isEmpty() == false) {
@@ -251,7 +251,7 @@ public class FetchPhase implements SearchPhase {
         SourceLookup sourceLookup = context.lookup().source();
         sourceLookup.setSegmentAndDocument(subReaderContext, subDocId);
         if (fieldsVisitor.source() != null) {
-            sourceLookup.setSource(fieldsVisitor.source());
+            sourceLookup.setSource(fieldsVisitor.source());// 将source字段内容保存到SearchContext
         }
         return searchHit;
     }

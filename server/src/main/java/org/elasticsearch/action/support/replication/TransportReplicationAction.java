@@ -295,7 +295,7 @@ public abstract class TransportReplicationAction<
 
     protected void handlePrimaryRequest(final ConcreteShardRequest<Request> request, final TransportChannel channel, final Task task) {
         Releasable releasable = checkPrimaryLimits(request.getRequest(), request.sentFromLocalReroute(),
-            request.localRerouteInitiatedByNodeClient());
+            request.localRerouteInitiatedByNodeClient());//没用
         ActionListener<Response> listener =
             ActionListener.runBefore(new ChannelActionListener<>(channel, transportPrimaryAction, request), releasable::close);
 
@@ -343,7 +343,7 @@ public abstract class TransportReplicationAction<
                 throw new ShardNotFoundException(shardId, "expected allocation id [{}] with term [{}] but found [{}]",
                     primaryRequest.getTargetAllocationID(), primaryRequest.getPrimaryTerm(), actualTerm);
             }
-            // 检查当前是否有阻塞的操作，有的话，就缓存起来，等后面阻塞的操作完成后再执行。阻塞操作：primary relocated #15900 , replica promotion
+            // 检查当前是否有阻塞的操作，有的话，就缓存起来，等后面阻塞的操作完成后再执行。阻塞操作：primary relocated handoff #15900 , replica promotion handoff
             acquirePrimaryOperationPermit(
                     indexShard,
                     primaryRequest.getRequest(),

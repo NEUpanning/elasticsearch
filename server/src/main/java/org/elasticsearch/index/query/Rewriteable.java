@@ -95,7 +95,7 @@ public interface Rewriteable<T> {
         T builder = original;
         try {
             for (T rewrittenBuilder = builder.rewrite(context); rewrittenBuilder != builder;
-                 rewrittenBuilder = builder.rewrite(context)) {
+                 rewrittenBuilder = builder.rewrite(context)) {// 对builder进行rewrite
                 builder = rewrittenBuilder;
                 if (iteration++ >= MAX_REWRITE_ROUNDS) {
                     // this is some protection against user provided queries if they don't obey the contract of rewrite we allow 16 rounds

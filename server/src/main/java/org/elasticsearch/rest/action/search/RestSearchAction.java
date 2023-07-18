@@ -110,7 +110,7 @@ public class RestSearchAction extends BaseRestHandler {
          */
         IntConsumer setSize = size -> searchRequest.source().size(size);
         request.withContentOrSourceParamParserOrNull(parser ->
-            parseSearchRequest(searchRequest, request, parser, setSize));
+            parseSearchRequest(searchRequest, request, parser, setSize));//将RestRequest转换为SearchRequest，将request.source解析成SearchSourceBuilder（也就是将查询body变成对象）
 
         return channel -> {
             RestCancellableNodeClient cancelClient = new RestCancellableNodeClient(client, request.getHttpChannel());
@@ -134,7 +134,7 @@ public class RestSearchAction extends BaseRestHandler {
         }
         searchRequest.indices(Strings.splitStringByCommaToArray(request.param("index")));
         if (requestContentParser != null) {
-            searchRequest.source().parseXContent(requestContentParser, true);
+            searchRequest.source().parseXContent(requestContentParser, true);//将xcontent（就是原本的请求Body）转换为SearchSourceBuilder（表示查询的对象）
         }
 
         final int batchedReduceSize = request.paramAsInt("batched_reduce_size", searchRequest.getBatchedReduceSize());

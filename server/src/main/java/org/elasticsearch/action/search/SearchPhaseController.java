@@ -280,7 +280,7 @@ public final class SearchPhaseController {
     public IntArrayList[] fillDocIdsToLoad(int numShards, ScoreDoc[] shardDocs) {
         IntArrayList[] docIdsToLoad = new IntArrayList[numShards];
         for (ScoreDoc shardDoc : shardDocs) {
-            IntArrayList shardDocIdsToLoad = docIdsToLoad[shardDoc.shardIndex];
+            IntArrayList shardDocIdsToLoad = docIdsToLoad[shardDoc.shardIndex];// shardDoc.shardIndex为doc对应的分片. 被es改过
             if (shardDocIdsToLoad == null) {
                 shardDocIdsToLoad = docIdsToLoad[shardDoc.shardIndex] = new IntArrayList();
             }

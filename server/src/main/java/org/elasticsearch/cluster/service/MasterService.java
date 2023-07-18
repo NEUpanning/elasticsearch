@@ -269,7 +269,7 @@ public class MasterService extends AbstractLifecycleComponent {
 
         // indefinitely wait for publication to complete
         try {
-            FutureUtils.get(fut);//阻塞等待publish完成
+            FutureUtils.get(fut);//阻塞等待整个publish完成（包含publish and commit）
             onPublicationSuccess(clusterChangedEvent, taskOutputs);
         } catch (Exception e) {
             onPublicationFailed(clusterChangedEvent, taskOutputs, startTimeMillis, e);
@@ -278,7 +278,7 @@ public class MasterService extends AbstractLifecycleComponent {
 
     void onPublicationSuccess(ClusterChangedEvent clusterChangedEvent, TaskOutputs taskOutputs) {
         final long notificationStartTime = threadPool.relativeTimeInMillis();
-        taskOutputs.processedDifferentClusterState(clusterChangedEvent.previousState(), clusterChangedEvent.state());
+        taskOutputs.processedDifferentClusterState(clusterChangedEvent.previousState(), clusterChangedEvent.state());//调用cluster state change task的listener，如果是rest请求触发的，listener将结果返回给coordinator
 
         try {
             taskOutputs.clusterStatePublished(clusterChangedEvent);

@@ -121,7 +121,7 @@ import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-//一个engine对应一个shard。每次写入都用这个
+//一个engine对应一个shard。每次读写都用这个
 public class InternalEngine extends Engine {
 
     /**
@@ -135,7 +135,7 @@ public class InternalEngine extends Engine {
     private final IndexWriter indexWriter;
 
     private final ExternalReaderManager externalReaderManager;
-    private final ElasticsearchReaderManager internalReaderManager;
+    private final ElasticsearchReaderManager internalReaderManager;//保存ElasticsearchReader。ElasticsearchReader用于创建searcher。ElasticsearchReader保存分片所在目录信息
 
     private final Lock flushLock = new ReentrantLock();
     private final ReentrantLock optimizeLock = new ReentrantLock();
@@ -1609,7 +1609,7 @@ public class InternalEngine extends Engine {
                         referenceManager.maybeRefreshBlocking();
                         refreshed = true;
                     } else {
-                        refreshed = referenceManager.maybeRefresh();
+                        refreshed = referenceManager.maybeRefresh();//触发IndexWriter刷新出新的segment，并创建新的ElasticsearchDirectoryReader，使得新数据可读
                     }
                 } finally {
                     store.decRef();

@@ -198,8 +198,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
     protected void doExecute(Task task, SearchRequest searchRequest, ActionListener<SearchResponse> listener) {
         final long relativeStartNanos = System.nanoTime();
         final SearchTimeProvider timeProvider =
-            new SearchTimeProvider(searchRequest.getOrCreateAbsoluteStartMillis(), relativeStartNanos, System::nanoTime);
-        ActionListener<SearchSourceBuilder> rewriteListener = ActionListener.wrap(source -> {
+            new SearchTimeProvider(searchRequest.getOrCreateAbsoluteStartMillis(), relativeStartNanos, System::nanoTime);//用于记录相对时间和绝对时间
+        ActionListener<SearchSourceBuilder> rewriteListener = ActionListener.wrap(source -> {//rewrite结束后触发
             if (source != searchRequest.source()) {
                 // only set it if it changed - we don't allow null values to be set but it might be already null. this way we catch
                 // situations when source is rewritten to null due to a bug
@@ -209,7 +209,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
             final Map<String, OriginalIndices> remoteClusterIndices = remoteClusterService.groupIndices(searchRequest.indicesOptions(),
                 searchRequest.indices(), idx -> indexNameExpressionResolver.hasIndexAbstraction(idx, clusterState));
             OriginalIndices localIndices = remoteClusterIndices.remove(RemoteClusterAware.LOCAL_CLUSTER_GROUP_KEY);
-            if (remoteClusterIndices.isEmpty()) {
+            if (remoteClusterIndices.isEmpty()) {//只在本地集群查询
                 executeLocalSearch(task, timeProvider, searchRequest, localIndices, clusterState, listener);
             } else {
                 if (shouldMinimizeRoundtrips(searchRequest)) {
@@ -238,11 +238,11 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                 }
             }
         }, listener::onFailure);
-        if (searchRequest.source() == null) {
+        if (searchRequest.source() == null) {//正常查询没见过为null的情况。Body为空时也不为null
             rewriteListener.onResponse(searchRequest.source());
         } else {
             Rewriteable.rewriteAndFetch(searchRequest.source(), searchService.getRewriteContext(timeProvider::getAbsoluteStartMillis),
-                rewriteListener);
+                rewriteListener);//对query进行rewrite以优化性能
         }
     }
 
@@ -469,35 +469,35 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
         // TODO: I think startTime() should become part of ActionRequest and that should be used both for index name
         // date math expressions and $now in scripts. This way all apis will deal with now in the same way instead
         // of just for the _search api
-        final Index[] indices = resolveLocalIndices(localIndices, clusterState, timeProvider);
-        Map<String, AliasFilter> aliasFilter = buildPerIndexAliasFilter(searchRequest, clusterState, indices, remoteAliasMap);
+        final Index[] indices = resolveLocalIndices(localIndices, clusterState, timeProvider);//解析出真正的index名称（例如用了通配符、alias）
+        Map<String, AliasFilter> aliasFilter = buildPerIndexAliasFilter(searchRequest, clusterState, indices, remoteAliasMap);//aliasFilter是用于构建查询请求，功能：对于某个alias只能查询配置的filter过滤之后的文档
         Map<String, Set<String>> routingMap = indexNameExpressionResolver.resolveSearchRouting(clusterState, searchRequest.routing(),
-            searchRequest.indices());
+            searchRequest.indices());//查询的routing。有request配置的routing和alias routing
         routingMap = routingMap == null ? Collections.emptyMap() : Collections.unmodifiableMap(routingMap);
         String[] concreteIndices = new String[indices.length];
         for (int i = 0; i < indices.length; i++) {
             concreteIndices[i] = indices[i].getName();
         }
-        Map<String, Long> nodeSearchCounts = searchTransportService.getPendingSearchRequests();
+        Map<String, Long> nodeSearchCounts = searchTransportService.getPendingSearchRequests();//每个节点等待返回的查询请求数量。作为查询节点自适应选择算法的参数之一
         GroupShardsIterator<ShardIterator> localShardsIterator = clusterService.operationRouting().searchShards(clusterState,
                 concreteIndices, routingMap, searchRequest.preference(), searchService.getResponseCollectorService(), nodeSearchCounts);//构造查询分片列表，其中ShardIterator中的每个ShardRouting组是使用自适应副本选择算法排序过的
         GroupShardsIterator<SearchShardIterator> shardIterators = mergeShardsIterators(localShardsIterator, localIndices,
             searchRequest.getLocalClusterAlias(), remoteShardIterators);
 
-        failIfOverShardCountLimit(clusterService, shardIterators.size());
+        failIfOverShardCountLimit(clusterService, shardIterators.size());//查询shard数限制
 
-        Map<String, Float> concreteIndexBoosts = resolveIndexBoosts(searchRequest, clusterState);
+        Map<String, Float> concreteIndexBoosts = resolveIndexBoosts(searchRequest, clusterState);//如果使用了indices_boost功能，解析出索引对应的boost
 
         // optimize search type for cases where there is only one shard group to search on
         if (shardIterators.size() == 1) {
             // if we only have one group, then we always want Q_T_F, no need for DFS, and no need to do THEN since we hit one shard
-            searchRequest.searchType(QUERY_THEN_FETCH);
+            searchRequest.searchType(QUERY_THEN_FETCH);//只有一个shard的情况，直接query并fetch就行，无需再在协调节点reduce query result
         }
-        if (searchRequest.allowPartialSearchResults() == null) {
+        if (searchRequest.allowPartialSearchResults() == null) {//查询请求没指定allow_partial_search_results，则使用默认集群配置
            // No user preference defined in search request - apply cluster service default
             searchRequest.allowPartialSearchResults(searchService.defaultAllowPartialSearchResults());
         }
-        if (searchRequest.isSuggestOnly()) {
+        if (searchRequest.isSuggestOnly()) {//查询语句中只包含suggest. suggest用于提示查询语句
             // disable request cache if we have only suggest
             searchRequest.requestCache(false);
             switch (searchRequest.searchType()) {
@@ -510,8 +510,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
 
         final DiscoveryNodes nodes = clusterState.nodes();
         BiFunction<String, String, Transport.Connection> connectionLookup = buildConnectionLookup(searchRequest.getLocalClusterAlias(),
-            nodes::get, remoteConnections, searchTransportService::getConnection);
-        boolean preFilterSearchShards = shouldPreFilterSearchShards(clusterState, searchRequest, indices, shardIterators.size());
+            nodes::get, remoteConnections, searchTransportService::getConnection);//可以获取local cluster或remote cluster的connection
+        boolean preFilterSearchShards = shouldPreFilterSearchShards(clusterState, searchRequest, indices, shardIterators.size());//是否执行CanMatchPreFilterSearchPhase #25658
         searchAsyncAction(task, searchRequest, shardIterators, timeProvider, connectionLookup, clusterState,
             Collections.unmodifiableMap(aliasFilter), concreteIndexBoosts, routingMap, listener, preFilterSearchShards, clusters).start();
     }
@@ -586,7 +586,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                                                         Map<String, Set<String>> indexRoutings,
                                                         ActionListener<SearchResponse> listener,
                                                         boolean preFilter,
-                                                        SearchResponse.Clusters clusters) {
+                                                        SearchResponse.Clusters clusters) {//创建不同类型的search action
         Executor executor = threadPool.executor(ThreadPool.Names.SEARCH);
         if (preFilter) {
             return new CanMatchPreFilterSearchPhase(logger, searchTransportService, connectionLookup,

@@ -27,7 +27,7 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * A generic abstraction on top of handling content, inspired by JSON and pull parsing.
+ * A generic abstraction on top of handling content, inspired by JSON and pull parsing.代表XContentType格式的内容
  */
 public interface XContent {
     /**

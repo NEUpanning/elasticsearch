@@ -63,7 +63,7 @@ class ElasticsearchReaderManager extends ReferenceManager<ElasticsearchDirectory
 
     @Override
     protected ElasticsearchDirectoryReader refreshIfNeeded(ElasticsearchDirectoryReader referenceToRefresh) throws IOException {
-        final ElasticsearchDirectoryReader reader = (ElasticsearchDirectoryReader) DirectoryReader.openIfChanged(referenceToRefresh);
+        final ElasticsearchDirectoryReader reader = (ElasticsearchDirectoryReader) DirectoryReader.openIfChanged(referenceToRefresh);//获取新reader，使reader能够读取最新数据
         if (reader != null) {
             refreshListener.accept(reader, referenceToRefresh);
         }

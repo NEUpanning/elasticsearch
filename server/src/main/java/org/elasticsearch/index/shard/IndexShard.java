@@ -1257,7 +1257,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         readAllowed();
         markSearcherAccessed();
         final Engine engine = getEngine();
-        final Engine.Searcher searcher = engine.acquireSearcher(source, scope);
+        final Engine.Searcher searcher = engine.acquireSearcher(source, scope);//实例化用于查询的searcher，他继承自Lucene的indexSearcher
         return wrapSearcher(searcher);
     }
 

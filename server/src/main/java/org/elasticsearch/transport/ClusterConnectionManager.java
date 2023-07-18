@@ -104,7 +104,7 @@ public class ClusterConnectionManager implements ConnectionManager {
     public void connectToNode(DiscoveryNode node, ConnectionProfile connectionProfile,
                               ConnectionValidator connectionValidator,
                               ActionListener<Void> listener) throws ConnectTransportException {
-        ConnectionProfile resolvedProfile = ConnectionProfile.resolveConnectionProfile(connectionProfile, defaultProfile);
+        ConnectionProfile resolvedProfile = ConnectionProfile.resolveConnectionProfile(connectionProfile, defaultProfile);//对于13个长连接走到这里时，connectionProfile为null，使用defaultProfile
         if (node == null) {
             listener.onFailure(new ConnectTransportException(null, "can't connect to a null node"));
             return;

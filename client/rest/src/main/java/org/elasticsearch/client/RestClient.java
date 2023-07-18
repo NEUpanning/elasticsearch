@@ -253,12 +253,12 @@ public class RestClient implements Closeable {
         HttpResponse httpResponse;
         try {
             httpResponse = client.execute(context.requestProducer, context.asyncResponseConsumer, context.context, null).get();
-        } catch(Exception e) {
+        } catch(Exception e) {// 无论任何异常
             RequestLogger.logFailedRequest(logger, request.httpRequest, context.node, e);
             onFailure(context.node);
             Exception cause = extractAndWrapCause(e);
             addSuppressedException(previousException, cause);
-            if (nodeTuple.nodes.hasNext()) {
+            if (nodeTuple.nodes.hasNext()) {// 失败自动重试
                 return performRequest(nodeTuple, request, cause);
             }
             if (cause instanceof IOException) {
@@ -269,12 +269,12 @@ public class RestClient implements Closeable {
             }
             throw new IllegalStateException("unexpected exception type: must be either RuntimeException or IOException", cause);
         }
-        ResponseOrResponseException responseOrResponseException = convertResponse(request, context.node, httpResponse);
+        ResponseOrResponseException responseOrResponseException = convertResponse(request, context.node, httpResponse);// 如果是502/503/504返回exception，小于300则返回response，其他抛出异常
         if (responseOrResponseException.responseException == null) {
             return responseOrResponseException.response;
         }
         addSuppressedException(previousException, responseOrResponseException.responseException);
-        if (nodeTuple.nodes.hasNext()) {
+        if (nodeTuple.nodes.hasNext()) {//502/503/504走到这里进行重试
             return performRequest(nodeTuple, request, responseOrResponseException.responseException);
         }
         throw responseOrResponseException.responseException;
@@ -396,7 +396,7 @@ public class RestClient implements Closeable {
      * that is closest to being revived.
      * @throws IOException if no nodes are available
      */
-    private NodeTuple<Iterator<Node>> nextNodes() throws IOException {
+    private NodeTuple<Iterator<Node>> nextNodes() throws IOException { // sniff和被调用执行请求时会使用
         NodeTuple<List<Node>> nodeTuple = this.nodeTuple;
         Iterable<Node> hosts = selectNodes(nodeTuple, blacklist, lastNodeIndex, nodeSelector);
         return new NodeTuple<>(hosts.iterator(), nodeTuple.authCache);

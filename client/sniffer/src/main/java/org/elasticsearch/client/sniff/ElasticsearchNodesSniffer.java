@@ -102,7 +102,7 @@ public final class ElasticsearchNodesSniffer implements NodesSniffer {
      */
     @Override
     public List<Node> sniff() throws IOException {
-        Response response = restClient.performRequest(request);
+        Response response = restClient.performRequest(request);// 使用NodeSelector从所有节点中选择一组节点中的一个节点获取cluster state
         return readHosts(response.getEntity(), scheme, jsonFactory);
     }
 

@@ -124,8 +124,8 @@ final class FetchSearchPhase extends SearchPhase {
             // query AND fetch optimization
             finishPhase.run();
         } else {
-            ScoreDoc[] scoreDocs = reducedQueryPhase.sortedTopDocs.scoreDocs;
-            final IntArrayList[] docIdsToLoad = searchPhaseController.fillDocIdsToLoad(numShards, scoreDocs);
+            ScoreDoc[] scoreDocs = reducedQueryPhase.sortedTopDocs.scoreDocs;// lucene返回的ScoreDoc，其中的doc是lucene的doc id
+            final IntArrayList[] docIdsToLoad = searchPhaseController.fillDocIdsToLoad(numShards, scoreDocs);//构建 shard -> doIds的映射
             // no docs to fetch -- sidestep everything and return
             if (scoreDocs.length == 0) {
                 // we have to release contexts here to free up resources
@@ -136,10 +136,10 @@ final class FetchSearchPhase extends SearchPhase {
             } else {
                 final ScoreDoc[] lastEmittedDocPerShard = isScrollSearch ?
                     searchPhaseController.getLastEmittedDocPerShard(reducedQueryPhase, numShards)
-                    : null;
+                    : null;//用于scroll
                 final CountedCollector<FetchSearchResult> counter = new CountedCollector<>(r -> fetchResults.set(r.getShardIndex(), r),
                     docIdsToLoad.length, // we count down every shard in the result no matter if we got any results or not
-                    finishPhase, context);
+                    finishPhase, context);//CountedCollector用于收集FetchSearchResult，当所有shard均返回时触发finishPhase.run
                 for (int i = 0; i < docIdsToLoad.length; i++) {
                     IntArrayList entry = docIdsToLoad[i];
                     SearchPhaseResult queryResult = queryResults.get(i);
@@ -160,7 +160,7 @@ final class FetchSearchPhase extends SearchPhase {
                         ShardFetchSearchRequest fetchSearchRequest = createFetchRequest(queryResult.queryResult().getContextId(), i, entry,
                             lastEmittedDocPerShard, searchShardTarget.getOriginalIndices());
                         executeFetch(i, searchShardTarget, counter, fetchSearchRequest, queryResult.queryResult(),
-                            connection);
+                            connection);// 发送fetchSearchRequest给searchShardTarget，counter进行回调处理
                     }
                 }
             }

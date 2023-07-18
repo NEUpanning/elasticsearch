@@ -75,7 +75,7 @@ class SearchQueryThenFetchAsyncAction extends AbstractSearchAsyncAction<SearchPh
 
     protected void executePhaseOnShard(final SearchShardIterator shardIt, final ShardRouting shard,
                                        final SearchActionListener<SearchPhaseResult> listener) {
-        ShardSearchRequest request = rewriteShardSearchRequest(super.buildShardSearchRequest(shardIt));
+        ShardSearchRequest request = rewriteShardSearchRequest(super.buildShardSearchRequest(shardIt));//基于已返回的query phase result来rewrite request
         getSearchTransport().sendExecuteQuery(getConnection(shardIt.getClusterAlias(), shard.currentNodeId()),
             request, getTask(), listener);
     }
@@ -118,13 +118,13 @@ class SearchQueryThenFetchAsyncAction extends AbstractSearchAsyncAction<SearchPh
 
         // disable tracking total hits if we already reached the required estimation.
         if (trackTotalHitsUpTo != SearchContext.TRACK_TOTAL_HITS_ACCURATE
-                && bottomSortCollector.getTotalHits() > trackTotalHitsUpTo) {
+                && bottomSortCollector.getTotalHits() > trackTotalHitsUpTo) {//通过rewrite实现：如果已经返回的hits数量超过了trackTotalHitsUpTo，则之后分片的查询不需要统计hits。TRACK_TOTAL_HITS功能可以在查询时配置hits threshold，es则只需要知道至少有多少hits就行
             request.source(request.source().shallowCopy().trackTotalHits(false));
         }
 
         // set the current best bottom field doc
         if (bottomSortCollector.getBottomSortValues() != null) {
-            request.setBottomSortValues(bottomSortCollector.getBottomSortValues());
+            request.setBottomSortValues(bottomSortCollector.getBottomSortValues());//rewrite request增加最小的排序值信息
         }
         return request;
     }

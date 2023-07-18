@@ -514,7 +514,7 @@ public class IndexNameExpressionResolver {
         // List of indices that don't require any routing
         Set<String> norouting = new HashSet<>();
         if (routing != null) {
-            paramRouting = Sets.newHashSet(Strings.splitStringByCommaToArray(routing));
+            paramRouting = Sets.newHashSet(Strings.splitStringByCommaToArray(routing));//request中的routing
         }
 
         for (String expression : resolvedExpressions) {
@@ -525,7 +525,7 @@ public class IndexNameExpressionResolver {
                     String concreteIndex = item.v1();
                     AliasMetadata aliasMetadata = item.v2();
                     if (!norouting.contains(concreteIndex)) {
-                        if (!aliasMetadata.searchRoutingValues().isEmpty()) {
+                        if (!aliasMetadata.searchRoutingValues().isEmpty()) {//存在alias routing配置
                             // Routing alias
                             if (routings == null) {
                                 routings = new HashMap<>();

@@ -87,7 +87,7 @@ final class TransportClientNodesService implements Closeable {
     private final Version minCompatibilityVersion;
 
     // nodes that are added to be discovered
-    private volatile List<DiscoveryNode> listedNodes = Collections.emptyList();
+    private volatile List<DiscoveryNode> listedNodes = Collections.emptyList();//连接的节点。初始化为创建client的传参节点
 
     private final Object mutex = new Object();
 
@@ -107,7 +107,7 @@ final class TransportClientNodesService implements Closeable {
 
     private volatile boolean closed;
 
-    private final TransportClient.HostFailureListener hostFailureListener;
+    private final TransportClient.HostFailureListener hostFailureListener;// 为null
 
     // TODO: migrate this to use low level connections and single type channels
     /** {@link ConnectionProfile} to use when to connecting to the listed nodes and doing a liveness check */
@@ -145,7 +145,7 @@ final class TransportClientNodesService implements Closeable {
             this.nodesSampler = new SimpleNodeSampler();
         }
         this.hostFailureListener = hostFailureListener;
-        this.nodesSamplerCancellable = threadPool.schedule(new ScheduledNodeSampler(), nodesSamplerInterval, ThreadPool.Names.GENERIC);
+        this.nodesSamplerCancellable = threadPool.schedule(new ScheduledNodeSampler(), nodesSamplerInterval, ThreadPool.Names.GENERIC);//在nodesSamplerInterval的时间间隔调度nodesSampler
     }
 
     public List<TransportAddress> transportAddresses() {
@@ -168,7 +168,7 @@ final class TransportClientNodesService implements Closeable {
         return this.listedNodes;
     }
 
-    public TransportClientNodesService addTransportAddresses(TransportAddress... transportAddresses) {
+    public TransportClientNodesService addTransportAddresses(TransportAddress... transportAddresses) {// 构建client时传参node
         synchronized (mutex) {
             if (closed) {
                 throw new IllegalStateException("transport client is closed, can't add an address");
@@ -184,7 +184,7 @@ final class TransportClientNodesService implements Closeable {
                     }
                 }
                 if (!found) {
-                    filtered.add(transportAddress);
+                    filtered.add(transportAddress);// 当前连接的节点中没有transportAddresses，则保存到filtered
                 }
             }
             if (filtered.isEmpty()) {
@@ -195,7 +195,7 @@ final class TransportClientNodesService implements Closeable {
                 DiscoveryNode node = new DiscoveryNode("#transport#-" + tempNodeIdGenerator.incrementAndGet(),
                         transportAddress, Collections.emptyMap(), Collections.emptySet(), minCompatibilityVersion);
                 logger.debug("adding address [{}]", node);
-                builder.add(node);
+                builder.add(node);// filtered全加入listedNodes
             }
             listedNodes = Collections.unmodifiableList(builder);
             nodesSampler.sample();
@@ -418,18 +418,18 @@ final class TransportClientNodesService implements Closeable {
                         });
                     transportService.sendRequest(connection, TransportLivenessAction.NAME, new LivenessRequest(),
                         TransportRequestOptions.builder().withType(TransportRequestOptions.Type.STATE).withTimeout(pingTimeout).build(),
-                        handler);
+                        handler);//获取节点信息
                     final LivenessResponse livenessResponse = handler.txGet();
-                    if (!ignoreClusterName && !clusterName.equals(livenessResponse.getClusterName())) {
+                    if (!ignoreClusterName && !clusterName.equals(livenessResponse.getClusterName())) {//校验节点信息
                         logger.warn("node {} not part of the cluster {}, ignoring...", listedNode, clusterName);
-                        newFilteredNodes.add(listedNode);
+                        newFilteredNodes.add(listedNode);//有问题则加入过滤的节点
                     } else {
                         // use discovered information but do keep the original transport address,
                         // so people can control which address is exactly used.
                         DiscoveryNode nodeWithInfo = livenessResponse.getDiscoveryNode();
                         newNodes.add(new DiscoveryNode(nodeWithInfo.getName(), nodeWithInfo.getId(), nodeWithInfo.getEphemeralId(),
                             nodeWithInfo.getHostName(), nodeWithInfo.getHostAddress(), listedNode.getAddress(),
-                            nodeWithInfo.getAttributes(), nodeWithInfo.getRoles(), nodeWithInfo.getVersion()));
+                            nodeWithInfo.getAttributes(), nodeWithInfo.getRoles(), nodeWithInfo.getVersion()));//没问题则加入准备连接的节点
                     }
                 } catch (ConnectTransportException e) {
                     logger.debug(() -> new ParameterizedMessage("failed to connect to node [{}], ignoring...", listedNode), e);
@@ -439,7 +439,7 @@ final class TransportClientNodesService implements Closeable {
                 }
             }
 
-            nodes = establishNodeConnections(newNodes);
+            nodes = establishNodeConnections(newNodes);//和newNodes建立连接
             filteredNodes = Collections.unmodifiableList(newFilteredNodes);
         }
     }
@@ -451,15 +451,15 @@ final class TransportClientNodesService implements Closeable {
             // the nodes we are going to ping include the core listed nodes that were added
             // and the last round of discovered nodes
             Set<DiscoveryNode> nodesToPing = new HashSet<>();
-            for (DiscoveryNode node : listedNodes) {
+            for (DiscoveryNode node : listedNodes) {//传参的节点
                 nodesToPing.add(node);
             }
-            for (DiscoveryNode node : nodes) {
+            for (DiscoveryNode node : nodes) {//上一次获取到的节点
                 nodesToPing.add(node);
             }
 
             final CountDownLatch latch = new CountDownLatch(nodesToPing.size());
-            final ConcurrentMap<DiscoveryNode, ClusterStateResponse> clusterStateResponses = ConcurrentCollections.newConcurrentMap();
+            final ConcurrentMap<DiscoveryNode, ClusterStateResponse> clusterStateResponses = ConcurrentCollections.newConcurrentMap();// 保存各个节点返回的cluster state
             try {
                 for (final DiscoveryNode nodeToPing : nodesToPing) {
                     threadPool.executor(ThreadPool.Names.MANAGEMENT).execute(new AbstractRunnable() {
@@ -495,17 +495,17 @@ final class TransportClientNodesService implements Closeable {
                             Transport.Connection pingConnection = null;
                             if (nodes.contains(nodeToPing)) {
                                 try {
-                                    pingConnection = transportService.getConnection(nodeToPing);
+                                    pingConnection = transportService.getConnection(nodeToPing);// 如果是已建立连接的节点，复用connection
                                 } catch (NodeNotConnectedException e) {
                                     // will use a temp connection
                                 }
                             }
-                            if (pingConnection == null) {
+                            if (pingConnection == null) { // 没获取到connection，创建临时的连接，执行完后释放
                                 logger.trace("connecting to cluster node [{}]", nodeToPing);
-                                connectionToClose = transportService.openConnection(nodeToPing, LISTED_NODES_PROFILE);
+                                connectionToClose = transportService.openConnection(nodeToPing, LISTED_NODES_PROFILE);// LISTED_NODES_PROFILE将几种类型的连接数都配置为1
                                 pingConnection = connectionToClose;
                             }
-                            transportService.sendRequest(pingConnection, ClusterStateAction.NAME,
+                            transportService.sendRequest(pingConnection, ClusterStateAction.NAME,// _cluster/state/nodes?local=true
                                 Requests.clusterStateRequest().clear().nodes(true).local(true),
                                 TransportRequestOptions.builder().withType(TransportRequestOptions.Type.STATE)
                                     .withTimeout(pingTimeout).build(),
@@ -550,7 +550,7 @@ final class TransportClientNodesService implements Closeable {
             HashSet<DiscoveryNode> newNodes = new HashSet<>();
             HashSet<DiscoveryNode> newFilteredNodes = new HashSet<>();
             for (Map.Entry<DiscoveryNode, ClusterStateResponse> entry : clusterStateResponses.entrySet()) {
-                if (!ignoreClusterName && !clusterName.equals(entry.getValue().getClusterName())) {
+                if (!ignoreClusterName && !clusterName.equals(entry.getValue().getClusterName())) {// 非当前集群的节点过滤掉
                     logger.warn("node {} not part of the cluster {}, ignoring...",
                             entry.getValue().getState().nodes().getLocalNode(), clusterName);
                     newFilteredNodes.add(entry.getKey());
@@ -561,7 +561,7 @@ final class TransportClientNodesService implements Closeable {
                 }
             }
 
-            nodes = establishNodeConnections(newNodes);
+            nodes = establishNodeConnections(newNodes); //与新的节点列表建立连接。为什么没有与旧节点断开连接,如果节点离开集群，该节点的连接并没有释放
             filteredNodes = Collections.unmodifiableList(new ArrayList<>(newFilteredNodes));
         }
     }

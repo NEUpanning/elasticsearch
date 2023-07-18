@@ -86,7 +86,7 @@ public final class SharedGroupFactory {
     private SharedGroup getGenericGroup() {
         if (genericGroup == null) {
             EventLoopGroup eventLoopGroup = new NioEventLoopGroup(workerCount,
-                daemonThreadFactory(settings, TcpTransport.TRANSPORT_WORKER_THREAD_NAME_PREFIX));
+                daemonThreadFactory(settings, TcpTransport.TRANSPORT_WORKER_THREAD_NAME_PREFIX));// 传参transport_worker的数量和线程名称
             this.genericGroup = new RefCountedGroup(eventLoopGroup);
         } else {
             genericGroup.incRef();

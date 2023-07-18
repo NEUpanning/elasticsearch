@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 final class TransportKeepAlive implements Closeable {
 
-    static final int PING_DATA_SIZE = -1;
+    static final int PING_DATA_SIZE = -1;//该值标识ping请求
 
     private final Logger logger = LogManager.getLogger(TransportKeepAlive.class);
     private final CounterMetric successfulPings = new CounterMetric();

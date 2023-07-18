@@ -97,7 +97,7 @@ public class Netty4Transport extends TcpTransport {
     private final ByteSizeValue receivePredictorMax;
     private final Map<String, ServerBootstrap> serverBootstraps = newConcurrentMap();
     private volatile Bootstrap clientBootstrap;// netty client 用于和其他节点通信
-    private volatile SharedGroupFactory.SharedGroup sharedGroup;
+    private volatile SharedGroupFactory.SharedGroup sharedGroup; // ,包含一组transport_worker线程来处理网络请求
 
     public Netty4Transport(Settings settings, Version version, ThreadPool threadPool, NetworkService networkService,
                            PageCacheRecycler pageCacheRecycler, NamedWriteableRegistry namedWriteableRegistry,
@@ -271,7 +271,7 @@ public class Netty4Transport extends TcpTransport {
     @Override
     protected Netty4TcpChannel initiateChannel(DiscoveryNode node) throws IOException {
         InetSocketAddress address = node.getAddress().address();
-        Bootstrap bootstrapWithHandler = clientBootstrap.clone();//每个连接均clone一个新的bootstrap，配置完全相同
+        Bootstrap bootstrapWithHandler = clientBootstrap.clone();//浅拷贝，bootstrap内的对象复用。
         bootstrapWithHandler.handler(getClientChannelInitializer(node));
         bootstrapWithHandler.remoteAddress(address);
         ChannelFuture connectFuture = bootstrapWithHandler.connect();

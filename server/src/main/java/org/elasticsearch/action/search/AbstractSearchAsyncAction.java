@@ -96,7 +96,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
     private final AtomicInteger totalOps = new AtomicInteger();
     private final int maxConcurrentRequestsPerNode;
     private final Map<String, PendingExecutions> pendingExecutionsPerNode = new ConcurrentHashMap<>();
-    private final boolean throttleConcurrentRequests;
+    private final boolean throttleConcurrentRequests;//#25632
 
     AbstractSearchAsyncAction(String name, Logger logger, SearchTransportService searchTransportService,
                               BiFunction<String, String, Transport.Connection> nodeIdToConnection,
@@ -126,7 +126,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
         this.expectedTotalOps = shardsIts.totalSizeWith1ForEmpty();
         this.maxConcurrentRequestsPerNode = maxConcurrentRequestsPerNode;
         // in the case were we have less shards than maxConcurrentRequestsPerNode we don't need to throttle
-        this.throttleConcurrentRequests = maxConcurrentRequestsPerNode < shardsIts.size();
+        this.throttleConcurrentRequests = maxConcurrentRequestsPerNode < shardsIts.size();//这个结果是假阳性，如果分片数大于maxConcurrentRequestsPerNode配置，单节点的shard request数也不一定大于maxConcurrentRequestsPerNode。即使发生假阳request也不会排队
         this.timeProvider = timeProvider;
         this.logger = logger;
         this.searchTransportService = searchTransportService;
@@ -154,7 +154,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
      * This is the main entry point for a search. This method starts the search execution of the initial phase.
      */
     public final void start() {
-        if (getNumShards() == 0) {
+        if (getNumShards() == 0) {//没有查询的分片，直接返回空结果
             //no search shards to search on, bail with empty response
             //(it happens with search across _all with no indices around and consistent with broadcast operations)
             int trackTotalHitsUpTo = request.source() == null ? SearchContext.DEFAULT_TRACK_TOTAL_HITS_UP_TO :
@@ -171,13 +171,13 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
 
     @Override
     public final void run() {
-        for (final SearchShardIterator iterator : toSkipShardsIts) {
+        for (final SearchShardIterator iterator : toSkipShardsIts) {//skip shard是在CanMatchPreFilterSearchPhase进行标记的，这些shard不会执行query then fetch
             assert iterator.skip();
             skipShard(iterator);
         }
         if (shardsIts.size() > 0) {
             assert request.allowPartialSearchResults() != null : "SearchRequest missing setting for allowPartialSearchResults";
-            if (request.allowPartialSearchResults() == false) {
+            if (request.allowPartialSearchResults() == false) {//如果未开启allowPartialSearchResults，有分片缺失则返回失败
                 final StringBuilder missingShards = new StringBuilder();
                 // Fail-fast verification of all shards being available
                 for (int index = 0; index < shardsIts.size(); index++) {
@@ -224,7 +224,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
         } else {
             final PendingExecutions pendingExecutions = throttleConcurrentRequests ?
                 pendingExecutionsPerNode.computeIfAbsent(shard.currentNodeId(), n -> new PendingExecutions(maxConcurrentRequestsPerNode))
-                : null;
+                : null;//使用max_concurrent_shard_requests限制协调节点向单个数据节点发出的shard request数量。超出的request会等待其他request完成才执行
             Runnable r = () -> {
                 final Thread thread = Thread.currentThread();
                 try {
@@ -235,7 +235,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
                                 try {
                                     onShardResult(result, shardIt);
                                 } finally {
-                                    executeNext(pendingExecutions, thread);
+                                    executeNext(pendingExecutions, thread);//执行下一个排队的请求
                                 }
                             }
 
@@ -244,7 +244,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
                                 try {
                                     onShardFailure(shardIndex, shard, shard.currentNodeId(), shardIt, t);
                                 } finally {
-                                    executeNext(pendingExecutions, thread);
+                                    executeNext(pendingExecutions, thread);//执行下一个排队的请求
                                 }
                             }
                         });
@@ -471,7 +471,7 @@ abstract class AbstractSearchAsyncAction<Result extends SearchPhaseResult> exten
         assert result.getShardIndex() != -1 : "shard index is not set";
         assert result.getSearchShardTarget() != null : "search shard target must not be null";
         successfulOps.incrementAndGet();
-        results.consumeResult(result);
+        results.consumeResult(result);// 保存返回结果
         hasShardResponse.set(true);
         if (logger.isTraceEnabled()) {
             logger.trace("got first-phase result from {}", result != null ? result.getSearchShardTarget() : null);

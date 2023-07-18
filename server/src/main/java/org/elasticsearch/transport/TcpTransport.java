@@ -196,7 +196,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     public final class NodeChannels extends CloseableConnection {
-        private final Map<TransportRequestOptions.Type, ConnectionProfile.ConnectionTypeHandle> typeMapping;//保存节点间的长连接
+        private final Map<TransportRequestOptions.Type, ConnectionProfile.ConnectionTypeHandle> typeMapping;//各类型request和对应的channel选择策略
         private final List<TcpChannel> channels;
         private final DiscoveryNode node;
         private final Version version;
@@ -287,7 +287,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     private List<TcpChannel> initiateConnection(DiscoveryNode node, ConnectionProfile connectionProfile,
-                                                ActionListener<Transport.Connection> listener) {
+                                                ActionListener<Transport.Connection> listener) {//初始化和节点的connection
         int numConnections = connectionProfile.getNumConnections();
         assert numConnections > 0 : "A connection profile must be configured with at least one connection";
 
@@ -313,7 +313,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             new ThreadedActionListener<>(logger, threadPool, ThreadPool.Names.GENERIC, listener, false));
 
         for (TcpChannel channel : channels) {
-            channel.addConnectListener(channelsConnectedListener);
+            channel.addConnectListener(channelsConnectedListener);//connection connected时触发listener
         }
 
         TimeValue connectTimeout = connectionProfile.getConnectTimeout();
@@ -943,14 +943,14 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 final TcpChannel handshakeChannel = channels.get(0);
                 try {
                     executeHandshake(node, handshakeChannel, connectionProfile, ActionListener.wrap(version -> {
-                        NodeChannels nodeChannels = new NodeChannels(node, channels, connectionProfile, version);
+                        NodeChannels nodeChannels = new NodeChannels(node, channels, connectionProfile, version);//实例化NodeChannels.TcpChannel为真正的连接，NodeChannels还包含选择channel的逻辑
                         long relativeMillisTime = threadPool.relativeTimeInMillis();
                         nodeChannels.channels.forEach(ch -> {
                             // Mark the channel init time
                             ch.getChannelStats().markAccessed(relativeMillisTime);
                             ch.addCloseListener(ActionListener.wrap(nodeChannels::close));
                         });
-                        keepAlive.registerNodeConnection(nodeChannels.channels, connectionProfile);
+                        keepAlive.registerNodeConnection(nodeChannels.channels, connectionProfile);// 注册keepalive，用于transport connection保活
                         listener.onResponse(nodeChannels);
                     }, e -> closeAndFail(e instanceof ConnectTransportException ?
                         e : new ConnectTransportException(node, "general node connection failure", e))));

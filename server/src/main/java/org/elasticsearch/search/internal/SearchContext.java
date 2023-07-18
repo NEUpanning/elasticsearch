@@ -75,10 +75,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * This class also implements {@link RefCounted} since in some situations like in {@link org.elasticsearch.search.SearchService}
  * a SearchContext can be closed concurrently due to independent events ie. when an index gets removed. To prevent accessing closed
  * IndexReader / IndexSearcher instances the SearchContext can be guarded by a reference count and fail if it's been closed by
- * an external event.
+ * an external event.#20095   当有查询使用SearchContext时，其他操作关闭了SearchContext，会导致抛出非预期的异常甚至更糟的情况。因此使用RefCounted，当有操作关闭SearchContext时先标记为closed，有查询则返回失败，当没有引用计数时再真正关闭SearchContext
  */
 // For reference why we use RefCounted here see #20095
-public abstract class SearchContext extends AbstractRefCounted implements Releasable {
+public abstract class SearchContext extends AbstractRefCounted implements Releasable {//Reaper进行free过期SearchContext
 
     public static final int DEFAULT_TERMINATE_AFTER = 0;
     public static final int TRACK_TOTAL_HITS_ACCURATE = Integer.MAX_VALUE;
@@ -87,7 +87,7 @@ public abstract class SearchContext extends AbstractRefCounted implements Releas
 
     private Map<Lifetime, List<Releasable>> clearables = null;
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private InnerHitsContext innerHitsContext;
+    private InnerHitsContext innerHitsContext;//用于nested和join
 
     protected SearchContext() {
         super("search_context");

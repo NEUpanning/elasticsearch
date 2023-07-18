@@ -380,7 +380,7 @@ public abstract class Publication {
                         discoveryNode);
                     return;
                 }
-                setAppliedCommit();//master标记localNodeAckEvent为done，其他节点记录下cluster state的版本
+                setAppliedCommit();//master标记localNodeAckEvent为done，其他节点记录下cluster state的版本并标记commit完成
                 onPossibleCompletion();
                 assert publicationCompletedIffAllTargetsInactiveOrCancelled();
             }

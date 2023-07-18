@@ -227,7 +227,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         clusterService.getClusterSettings().addSettingsUpdateConsumer(DEFAULT_KEEPALIVE_SETTING, MAX_KEEPALIVE_SETTING,
             this::setKeepAlives, this::validateKeepAlives);
 
-        this.keepAliveReaper = threadPool.scheduleWithFixedDelay(new Reaper(), keepAliveInterval, Names.SAME);
+        this.keepAliveReaper = threadPool.scheduleWithFixedDelay(new Reaper(), keepAliveInterval, Names.SAME);// 周期性free过期的context
 
         defaultSearchTimeout = DEFAULT_SEARCH_TIMEOUT_SETTING.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(DEFAULT_SEARCH_TIMEOUT_SETTING, this::setDefaultSearchTimeout);
@@ -291,7 +291,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     }
 
     protected void putContext(SearchContext context) {
-        final SearchContext previous = activeContexts.put(context.id().getId(), context);
+        final SearchContext previous = activeContexts.put(context.id().getId(), context);//保存context
         assert previous == null;
     }
 
@@ -354,7 +354,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
      * Try to load the query results from the cache or execute the query phase directly if the cache cannot be used.
      */
     private void loadOrExecuteQueryPhase(final ShardSearchRequest request, final SearchContext context) throws Exception {
-        final boolean canCache = indicesService.canCache(request, context);
+        final boolean canCache = indicesService.canCache(request, context);//判断是否可以使用request_cache
         context.getQueryShardContext().freezeContext();
         if (canCache) {
             indicesService.loadIntoContext(request, context, queryPhase);//尝试从cache加载
@@ -366,12 +366,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     public void executeQueryPhase(ShardSearchRequest request, SearchShardTask task, ActionListener<SearchPhaseResult> listener) {
         assert request.canReturnNullResponseIfMatchNoDocs() == false || request.numberOfShards() > 1
             : "empty responses require more than one shard";
-        IndexService indexService = indicesService.indexServiceSafe(request.shardId().getIndex());
+        IndexService indexService = indicesService.indexServiceSafe(request.shardId().getIndex());//获取索引和分片的service，能做一些操作提供最新元数据
         IndexShard shard = indexService.getShard(request.shardId().id());
         rewriteAndFetchShardRequest(shard, request, new ActionListener<ShardSearchRequest>() {
             @Override
             public void onResponse(ShardSearchRequest orig) {
-                if (orig.canReturnNullResponseIfMatchNoDocs()) {
+                if (orig.canReturnNullResponseIfMatchNoDocs()) {// 判断是否可以当query为match none时，直接返回空值，不占用查询线程池构建空response
                     // we clone the shard request and perform a quick rewrite using a lightweight
                     // searcher since we are outside of the search thread pool.
                     // If the request rewrites to "match none" we can shortcut the query phase
@@ -380,7 +380,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                     try (Engine.Searcher searcher = shard.acquireCanMatchSearcher()) {
                         QueryShardContext context = indexService.newQueryShardContext(canMatchRequest.shardId().id(), searcher,
                             canMatchRequest::nowInMillis, canMatchRequest.getClusterAlias());
-                        Rewriteable.rewrite(canMatchRequest.getRewriteable(), context, true);
+                        Rewriteable.rewrite(canMatchRequest.getRewriteable(), context, true);//进行rewrite，如果走到else分支也会进行rewrite
                     } catch (Exception exc) {
                         listener.onFailure(exc);
                         return;
@@ -430,16 +430,16 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         context.incRef();
         try {
             final long afterQueryTime;
-            try (SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(context)) {
-                contextProcessing(context);
-                loadOrExecuteQueryPhase(request, context);
+            try (SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(context)) {//SearchOperationListenerExecutor用来保证SearchOperationListener的相关方法被执行
+                contextProcessing(context);//关闭context超时，避免context被free
+                loadOrExecuteQueryPhase(request, context);//尝试从request cache读取结果，或执行query phase
                 if (context.queryResult().hasSearchContext() == false && context.scrollContext() == null) {
-                    freeContext(context.id());
+                    freeContext(context.id());// 如果没有hit则释放context
                 } else {
-                    contextProcessedSuccessfully(context);
+                    contextProcessedSuccessfully(context);// 有hit命中的话context，fetch阶段还要用
                 }
                 afterQueryTime = executor.success();
-            }
+            }//触发executor.close()
             if (request.numberOfShards() == 1) {
                 return executeFetchPhase(context, afterQueryTime);
             }
@@ -572,7 +572,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public void executeFetchPhase(ShardFetchRequest request, SearchShardTask task, ActionListener<FetchSearchResult> listener) {
         runAsync(request.contextId(), () -> {
-            final SearchContext context = findContext(request.contextId(), request);
+            final SearchContext context = findContext(request.contextId(), request);// 找到query阶段使用的context。相同的context保证查询使用的是相同的reader，即query和fetch查的数据一样
             context.incRef();
             try {
                 context.setTask(task);
@@ -580,11 +580,11 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 if (request.lastEmittedDoc() != null) {
                     context.scrollContext().lastEmittedDoc = request.lastEmittedDoc();
                 }
-                context.docIdsToLoad(request.docIds(), 0, request.docIdsSize());
-                try (SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(context, true, System.nanoTime())) {
+                context.docIdsToLoad(request.docIds(), 0, request.docIdsSize());// 上面都是保存请求信息到context，后面直接传递context作为参数就好
+                try (SearchOperationListenerExecutor executor = new SearchOperationListenerExecutor(context, true, System.nanoTime())) {// SearchOperationListenerExecutor用在执行fetchPhase前后触发listener，比如统计耗时
                     fetchPhase.execute(context);
                     if (fetchPhaseShouldFreeContext(context)) {
-                        freeContext(request.contextId());
+                        freeContext(request.contextId());// 非scroll释放context
                     } else {
                         contextProcessedSuccessfully(context);
                     }
@@ -630,7 +630,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     final SearchContext createAndPutContext(ShardSearchRequest request, SearchShardTask task) throws IOException {
         SearchContext context = createContext(request, task);
-        onNewContext(context);
+        onNewContext(context);//Q_T_F无操作
         boolean success = false;
         try {
             putContext(context);
@@ -666,7 +666,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     }
 
     final SearchContext createContext(ShardSearchRequest request, SearchShardTask searchTask) throws IOException {
-        final DefaultSearchContext context = createSearchContext(request, defaultSearchTimeout);
+        final DefaultSearchContext context = createSearchContext(request, defaultSearchTimeout);//构建查询期间使用的context
         try {
             if (request.scroll() != null) {
                 context.addReleasable(openScrollContexts::decrementAndGet, Lifetime.CONTEXT);
@@ -679,7 +679,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 context.scrollContext(new ScrollContext());
                 context.scrollContext().scroll = request.scroll();
             }
-            parseSource(context, request.source());
+            parseSource(context, request.source());//将ES dsl转换为Lucene query语句。并将所有查询信息保存到context
 
             // if the from and size are still not set, default them
             if (context.from() == -1) {
@@ -692,15 +692,15 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
             // pre process
             dfsPhase.preProcess(context);
-            queryPhase.preProcess(context);
+            queryPhase.preProcess(context);//做一些查询请求的合法性检查和boost转换成Lucene query
             fetchPhase.preProcess(context);
 
             // compute the context keep alive
             long keepAlive = defaultKeepAlive;
             if (request.scroll() != null && request.scroll().keepAlive() != null) {
-                keepAlive = request.scroll().keepAlive().millis();
+                keepAlive = request.scroll().keepAlive().millis();//如果用了scroll，context的存活时间设为传参
             }
-            contextScrollKeepAlive(context, keepAlive);
+            contextScrollKeepAlive(context, keepAlive);//检查并配置context的存活时间
         } catch (Exception e) {
             context.close();
             throw e;
@@ -718,7 +718,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         IndexShard indexShard = indexService.getShard(request.shardId().getId());
         SearchShardTarget shardTarget = new SearchShardTarget(clusterService.localNode().getId(),
             indexShard.shardId(), request.getClusterAlias(), OriginalIndices.NONE);
-        Engine.Searcher searcher = indexShard.acquireSearcher(source);
+        Engine.Searcher searcher = indexShard.acquireSearcher(source);//创建一个新的searcher，新的searcher才能看到最新的数据
 
         boolean success = false;
         DefaultSearchContext searchContext = null;
@@ -801,7 +801,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     }
 
     private void contextProcessing(SearchContext context) {
-        // disable timeout while executing a search
+        // disable timeout while executing a search 超时会使context失效被释放
         context.accessed(-1);
     }
 
@@ -842,7 +842,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         Map<String, InnerHitContextBuilder> innerHitBuilders = new HashMap<>();
         if (source.query() != null) {
             InnerHitContextBuilder.extractInnerHits(source.query(), innerHitBuilders);
-            context.parsedQuery(queryShardContext.toQuery(source.query()));
+            context.parsedQuery(queryShardContext.toQuery(source.query()));//将ES dsl转换为lucene query
         }
         if (source.postFilter() != null) {
             InnerHitContextBuilder.extractInnerHits(source.postFilter(), innerHitBuilders);
@@ -1162,14 +1162,14 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     }
 
     private void rewriteAndFetchShardRequest(IndexShard shard, ShardSearchRequest request, ActionListener<ShardSearchRequest> listener) {
-        ActionListener<Rewriteable> actionListener = ActionListener.wrap(r ->
+        ActionListener<Rewriteable> actionListener = ActionListener.wrap(r ->// #27500 简单来说就是如果未配置refresh interval,当分片一段时间没查询会暂停refresh来提升写入性能，有查询时先refresh一下再执行
             // now we need to check if there is a pending refresh and register
             shard.awaitShardSearchActive(b -> listener.onResponse(request)),
             listener::onFailure);
         // we also do rewrite on the coordinating node (TransportSearchService) but we also need to do it here for BWC as well as
         // AliasFilters that might need to be rewritten. These are edge-cases but we are every efficient doing the rewrite here so it's not
         // adding a lot of overhead
-        Rewriteable.rewriteAndFetch(request.getRewriteable(), indicesService.getRewriteContext(request::nowInMillis), actionListener);
+        Rewriteable.rewriteAndFetch(request.getRewriteable(), indicesService.getRewriteContext(request::nowInMillis), actionListener);//有些情况data node需要再次rewrite request
     }
 
     /**

@@ -460,8 +460,8 @@ public class RestRequest implements ToXContent.Params {
      * back to the user when there isn't request content.
      */
     public final void withContentOrSourceParamParserOrNull(CheckedConsumer<XContentParser, IOException> withParser) throws IOException {
-        if (hasContentOrSourceParam()) {
-            Tuple<XContentType, BytesReference> tuple = contentOrSourceParam();
+        if (hasContentOrSourceParam()) {// request是否包含body
+            Tuple<XContentType, BytesReference> tuple = contentOrSourceParam();// Body类型:body
             BytesReference content = tuple.v2();
             XContentType xContentType = tuple.v1();
             try (InputStream stream = content.streamInput();

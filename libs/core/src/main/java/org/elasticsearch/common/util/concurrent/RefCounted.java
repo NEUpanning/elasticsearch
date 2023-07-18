@@ -35,7 +35,7 @@ package org.elasticsearch.common.util.concurrent;
  *      } finally {
  *          inst.decRef();
  *      }
- * </pre>
+ * </pre> 一个实例当他的所有引用都是释放时，他会被通知。例如，当一个service被异步并发使用，某个使用方的操作close service可能导致其他使用方出现问题，所以需要等待没有使用方法
  */
 public interface RefCounted {
 

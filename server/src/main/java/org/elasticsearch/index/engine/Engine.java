@@ -644,9 +644,9 @@ public abstract class Engine implements Closeable {
         try {
             assert assertSearcherIsWarmedUp(source, scope);
             ReferenceManager<ElasticsearchDirectoryReader> referenceManager = getReferenceManager(scope);
-            final ElasticsearchDirectoryReader acquire = referenceManager.acquire();
+            final ElasticsearchDirectoryReader acquire = referenceManager.acquire();//获取本engine的ElasticsearchDirectoryReader，ElasticsearchDirectoryReader继承自Lucene的FilterDirectoryReader
             AtomicBoolean released = new AtomicBoolean(false);
-            Searcher engineSearcher = new Searcher(source, acquire,
+            Searcher engineSearcher = new Searcher(source, acquire,//使用reader构建searcher
                 engineConfig.getSimilarity(), engineConfig.getQueryCache(), engineConfig.getQueryCachingPolicy(),
                 () -> {
                 if (released.compareAndSet(false, true)) {
@@ -1605,7 +1605,7 @@ public abstract class Engine implements Closeable {
             this.ifPrimaryTerm = primaryTerm;
             return this;
         }
-        
+
         public long getIfPrimaryTerm() {
             return ifPrimaryTerm;
         }

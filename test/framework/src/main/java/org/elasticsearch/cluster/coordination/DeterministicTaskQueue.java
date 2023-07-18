@@ -44,7 +44,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-
+// 保存异步任务，使用者可以手动触发这些任务的执行，还能触发时间流逝用于周期性调度任务的执行
 public class DeterministicTaskQueue {
 
     private static final Logger logger = LogManager.getLogger(DeterministicTaskQueue.class);

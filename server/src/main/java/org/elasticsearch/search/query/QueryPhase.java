@@ -147,13 +147,13 @@ public class QueryPhase implements SearchPhase {
         // request, preProcess is called on the DFS phase phase, this is why we pre-process them
         // here to make sure it happens during the QUERY phase
         aggregationPhase.preProcess(searchContext);
-        boolean rescore = executeInternal(searchContext);
+        boolean rescore = executeInternal(searchContext);// 全文检索并确定是否需要二次评分
 
         if (rescore) { // only if we do a regular search
             rescorePhase.execute(searchContext);
         }
-        suggestPhase.execute(searchContext);
-        aggregationPhase.execute(searchContext);
+        suggestPhase.execute(searchContext);// 推荐请求部分
+        aggregationPhase.execute(searchContext); // 执行聚合逻辑
 
         if (searchContext.getProfilers() != null) {
             ProfileShardResult shardResults = SearchProfileShardResults
@@ -340,7 +340,7 @@ public class QueryPhase implements SearchPhase {
         }
         QuerySearchResult queryResult = searchContext.queryResult();
         try {
-            searcher.search(query, queryCollector);
+            searcher.search(query, queryCollector);// 调用Lucene进行查询，queryCollector是Lucene默认的SimpleTopScoreDocCollector
         } catch (EarlyTerminatingCollector.EarlyTerminationException e) {
             queryResult.terminatedEarly(true);
         } catch (TimeExceededException e) {

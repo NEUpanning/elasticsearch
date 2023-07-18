@@ -122,8 +122,8 @@ public final class IndicesRequestCache implements RemovalListener<IndicesRequest
         assert reader.getReaderCacheHelper() != null;
         final Key key =  new Key(cacheEntity, reader.getReaderCacheHelper().getKey(), cacheKey);
         Loader cacheLoader = new Loader(cacheEntity, loader);
-        BytesReference value = cache.computeIfAbsent(key, cacheLoader);
-        if (cacheLoader.isLoaded()) {
+        BytesReference value = cache.computeIfAbsent(key, cacheLoader);//如果cache中不存在key，会执行loader.load计算结果
+        if (cacheLoader.isLoaded()) {//是否执行过loader.load,执行过说明cache没有命中
             key.entity.onMiss();
             if (logger.isTraceEnabled()) {
                 logger.trace("Cache miss for reader version [{}] and request:\n {}", reader.getVersion(), cacheKeyRenderer.get());
@@ -133,11 +133,11 @@ public final class IndicesRequestCache implements RemovalListener<IndicesRequest
             if (!registeredClosedListeners.containsKey(cleanupKey)) {
                 Boolean previous = registeredClosedListeners.putIfAbsent(cleanupKey, Boolean.TRUE);
                 if (previous == null) {
-                    ElasticsearchDirectoryReader.addReaderCloseListener(reader, cleanupKey);
+                    ElasticsearchDirectoryReader.addReaderCloseListener(reader, cleanupKey);// 当ElasticsearchDirectoryReader被close时，会调用cleanupKey. cleanupKey会将Reader对应的缓存清除
                 }
             }
         } else {
-            key.entity.onHit();
+            key.entity.onHit();//cache命中计数
             if (logger.isTraceEnabled()) {
                 logger.trace("Cache hit for reader version [{}] and request:\n {}", reader.getVersion(), cacheKeyRenderer.get());
             }
@@ -248,7 +248,7 @@ public final class IndicesRequestCache implements RemovalListener<IndicesRequest
             if (o == null || getClass() != o.getClass()) return false;
             Key key = (Key) o;
             if (Objects.equals(readerCacheKey, key.readerCacheKey) == false) return false;
-            if (!entity.getCacheIdentity().equals(key.entity.getCacheIdentity())) return false;
+            if (!entity.getCacheIdentity().equals(key.entity.getCacheIdentity())) return false;//比较的是indexShard
             if (!value.equals(key.value)) return false;
             return true;
         }

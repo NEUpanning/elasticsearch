@@ -305,7 +305,7 @@ public final class ConnectionProfile {
     }
 
     /**
-     * Connection type handle encapsulates the logic which connection
+     * Connection type handle encapsulates the logic which connection逻辑是轮询channel list[offset,offset+length]的channel
      */
     static final class ConnectionTypeHandle {
         public final int length;
