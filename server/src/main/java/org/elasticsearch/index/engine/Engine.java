@@ -250,7 +250,7 @@ public abstract class Engine implements Closeable {
         public void activate() {
             assert lock == NOOP_LOCK : "throttling activated while already active";
             startOfThrottleNS = System.nanoTime();
-            lock = lockReference;
+            lock = lockReference;// 该锁在index时会获取，如果为NOOP_LOCK无影响，如果为lockReference则为独占锁
         }
 
         /** Deactivate throttling, which switches the lock to be an always-acquirable NoOpLock */

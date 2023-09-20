@@ -3172,7 +3172,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                             afterWriteOperation();
                         }
                     };
-                    threadPool.executor(ThreadPool.Names.FLUSH).execute(flush);//调度一次flush（即Lucence data fsync）
+                    threadPool.executor(ThreadPool.Names.FLUSH).execute(flush);//调度一次flush（即Lucence commit data fsync）
                 } else if (shouldRollTranslogGeneration()) {
                     logger.debug("submitting async roll translog generation request");
                     final AbstractRunnable roll = new AbstractRunnable() {

@@ -42,10 +42,10 @@ public final class MasterNodeChangePredicate {
             final boolean accept;
             if (newMaster == null) {
                 accept = false;
-            } else if (newMaster.getEphemeralId().equals(currentMasterId) == false) {
+            } else if (newMaster.getEphemeralId().equals(currentMasterId) == false) { // 新旧cluster state中的master不是同一个
                 accept = true;
             } else {
-                accept = newState.version() > currentVersion;
+                accept = newState.version() > currentVersion; // 新的集群状态版本更大
             }
             return accept;
         };

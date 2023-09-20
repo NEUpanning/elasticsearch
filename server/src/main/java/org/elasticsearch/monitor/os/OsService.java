@@ -51,7 +51,7 @@ public class OsService implements ReportingService<OsInfo> {
         logger.debug("using refresh_interval [{}]", refreshInterval);
     }
 
-    @Override
+    @Override// 直接返回内存的结果
     public OsInfo info() {
         return this.info;
     }

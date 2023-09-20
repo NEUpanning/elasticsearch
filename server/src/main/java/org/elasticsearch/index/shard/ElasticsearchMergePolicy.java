@@ -33,7 +33,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * A {@link MergePolicy} that upgrades segments and can upgrade merges.
+ * A {@link MergePolicy} that upgrades segments and can upgrade merges. upgrade segment的含义是将低版本的ES segment升级成高版本
  * <p>
  * It can be useful to use the background merging process to upgrade segments,
  * for example when we perform internal changes that imply different index

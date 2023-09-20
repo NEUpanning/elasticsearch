@@ -110,7 +110,7 @@ public class NodeService implements Closeable {
                            boolean indexingPressure) {
         // for indices stats we want to include previous allocated shards stats as well (it will
         // only be applied to the sensible ones to use, like refresh/merge/flush/indexing stats)
-        return new NodeStats(transportService.getLocalNode(), System.currentTimeMillis(),
+        return new NodeStats(transportService.getLocalNode(), System.currentTimeMillis(), // 都是调用的getOrRefresh,如果超过刷新间隔则调api取，否则直接返回
                 indices.anySet() ? indicesService.stats(indices) : null,
                 os ? monitorService.osService().stats() : null,
                 process ? monitorService.processService().stats() : null,

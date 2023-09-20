@@ -90,11 +90,11 @@ public class TransportClusterStateAction extends TransportMasterNodeReadAction<C
 
         final Predicate<ClusterState> acceptableClusterStatePredicate
             = request.waitForMetadataVersion() == null ? clusterState -> true
-            : clusterState -> clusterState.metadata().version() >= request.waitForMetadataVersion();
+            : clusterState -> clusterState.metadata().version() >= request.waitForMetadataVersion(); //根据request传参wait_for_metadata_version
 
         final Predicate<ClusterState> acceptableClusterStateOrNotMasterPredicate = request.local()
             ? acceptableClusterStatePredicate
-            : acceptableClusterStatePredicate.or(clusterState -> clusterState.nodes().isLocalNodeElectedMaster() == false);
+            : acceptableClusterStatePredicate.or(clusterState -> clusterState.nodes().isLocalNodeElectedMaster() == false); // 当前节点不是master则没有wait_for_metadata_version限制
 
         if (acceptableClusterStatePredicate.test(state)) {
             ActionListener.completeWith(listener, () -> buildResponse(request, state));

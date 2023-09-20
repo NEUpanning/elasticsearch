@@ -48,7 +48,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-// 按照大小控制doc异步刷盘
+// 按照indexing buffer大小控制触发refresh
 public class IndexingMemoryController implements IndexingOperationListener, Closeable {
 
     private static final Logger logger = LogManager.getLogger(IndexingMemoryController.class);
@@ -380,7 +380,7 @@ public class IndexingMemoryController implements IndexingOperationListener, Clos
                     if (doThrottle && throttled.contains(largest.shard) == false) {
                         logger.info("now throttling indexing for shard [{}]: segment writing can't keep up", largest.shard.shardId());
                         throttled.add(largest.shard);
-                        activateThrottling(largest.shard);
+                        activateThrottling(largest.shard);// shard开启throttle,只允许单线程写入数据
                     }
                 }
             }

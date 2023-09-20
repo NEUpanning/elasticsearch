@@ -135,9 +135,9 @@ public abstract class TransportMasterNodeAction<Request extends MasterNodeReques
 
         protected void doStart(ClusterState clusterState) {
             try {
-                final Predicate<ClusterState> masterChangePredicate = MasterNodeChangePredicate.build(clusterState);
+                final Predicate<ClusterState> masterChangePredicate = MasterNodeChangePredicate.build(clusterState); // 在no master/fail的情况用来校验新的cluster state
                 final DiscoveryNodes nodes = clusterState.nodes();
-                if (nodes.isLocalNodeElectedMaster() || localExecute(request)) {
+                if (nodes.isLocalNodeElectedMaster() || localExecute(request)) { // 当前节点为master或者request携带参数local=true
                     // check for block, if blocked, retry, else, execute locally
                     final ClusterBlockException blockException = checkBlock(request, clusterState);
                     if (blockException != null) {

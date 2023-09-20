@@ -255,7 +255,7 @@ public class RestClient implements Closeable {
             httpResponse = client.execute(context.requestProducer, context.asyncResponseConsumer, context.context, null).get();
         } catch(Exception e) {// 无论任何异常
             RequestLogger.logFailedRequest(logger, request.httpRequest, context.node, e);
-            onFailure(context.node);
+            onFailure(context.node);// 节点拉黑
             Exception cause = extractAndWrapCause(e);
             addSuppressedException(previousException, cause);
             if (nodeTuple.nodes.hasNext()) {// 失败自动重试
@@ -273,8 +273,8 @@ public class RestClient implements Closeable {
         if (responseOrResponseException.responseException == null) {
             return responseOrResponseException.response;
         }
-        addSuppressedException(previousException, responseOrResponseException.responseException);
-        if (nodeTuple.nodes.hasNext()) {//502/503/504走到这里进行重试
+        addSuppressedException(previousException, responseOrResponseException.responseException);// 因为会重试下个节点，所以之前的异常压制即可
+        if (nodeTuple.nodes.hasNext()) {//502/503/504走到这里进行重试,其他状态码convertResponse会抛出异常
             return performRequest(nodeTuple, request, responseOrResponseException.responseException);
         }
         throw responseOrResponseException.responseException;
@@ -482,7 +482,7 @@ public class RestClient implements Closeable {
      * Receives as an argument the host that was used for the failed attempt.
      */
     private void onFailure(Node node) {
-        while(true) {
+        while(true) {// 这里做了乐观并发控制
             DeadHostState previousDeadHostState =
                 blacklist.putIfAbsent(node.getHost(), new DeadHostState(DeadHostState.DEFAULT_TIME_SUPPLIER));
             if (previousDeadHostState == null) {
@@ -499,7 +499,7 @@ public class RestClient implements Closeable {
                 break;
             }
         }
-        failureListener.onFailure(node);
+        failureListener.onFailure(node); // sniff on failure listener
     }
 
     @Override
@@ -511,7 +511,7 @@ public class RestClient implements Closeable {
         return statusCode < 300;
     }
 
-    private static boolean isRetryStatus(int statusCode) {
+    private static boolean isRetryStatus(int statusCode) {// 在RestStatus中看状态码定义
         switch(statusCode) {
             case 502:
             case 503:

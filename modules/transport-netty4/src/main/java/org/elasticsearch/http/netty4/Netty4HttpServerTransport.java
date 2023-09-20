@@ -313,7 +313,7 @@ public class Netty4HttpServerTransport extends AbstractHttpServerTransport {
             if (handlingSettings.isCompression()) {
                 ch.pipeline().addLast("encoder_compress", new HttpContentCompressor(handlingSettings.getCompressionLevel()));
             }
-            ch.pipeline().addLast("request_creator", requestCreator);
+            ch.pipeline().addLast("request_creator", requestCreator); // 创建Netty4HttpRequest
             if (handlingSettings.isCorsEnabled()) {
                 ch.pipeline().addLast("cors", new Netty4CorsHandler(transport.corsConfig));
             }

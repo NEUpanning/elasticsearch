@@ -65,7 +65,7 @@ class ElasticsearchReaderManager extends ReferenceManager<ElasticsearchDirectory
     protected ElasticsearchDirectoryReader refreshIfNeeded(ElasticsearchDirectoryReader referenceToRefresh) throws IOException {
         final ElasticsearchDirectoryReader reader = (ElasticsearchDirectoryReader) DirectoryReader.openIfChanged(referenceToRefresh);//获取新reader，使reader能够读取最新数据
         if (reader != null) {
-            refreshListener.accept(reader, referenceToRefresh);
+            refreshListener.accept(reader, referenceToRefresh); // RamAccountingRefreshListener,记录segment内存使用用于内存熔断策略
         }
         return reader;
     }

@@ -59,7 +59,7 @@ public final class BulkRequestHandler {
             semaphore.acquire();
             toRelease = semaphore::release;
             CountDownLatch latch = new CountDownLatch(1);
-            retry.withBackoff(consumer, bulkRequest, ActionListener.runAfter(new ActionListener<BulkResponse>() {
+            retry.withBackoff(consumer, bulkRequest, ActionListener.runAfter(new ActionListener<BulkResponse>() {// consumer通常是client.bulk()，调用consumer发送数据
                 @Override
                 public void onResponse(BulkResponse response) {
                     listener.afterBulk(executionId, bulkRequest, response);
@@ -69,7 +69,7 @@ public final class BulkRequestHandler {
                 public void onFailure(Exception e) {
                     listener.afterBulk(executionId, bulkRequest, e);
                 }
-            }, () -> {
+            }, () -> {// 请求返回响应时执行
                 semaphore.release();
                 latch.countDown();
             }));

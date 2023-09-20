@@ -49,7 +49,7 @@ public final class ProcessService implements ReportingService<ProcessInfo> {
     }
 
     @Override
-    public ProcessInfo info() {
+    public ProcessInfo info() {// 直接返回内存的结果
         return this.info;
     }
 

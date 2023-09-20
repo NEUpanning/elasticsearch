@@ -421,7 +421,7 @@ public class BulkProcessor implements Closeable {
         return this;
     }
 
-    private Scheduler.Cancellable startFlushTask(TimeValue flushInterval, Scheduler scheduler) {
+    private Scheduler.Cancellable startFlushTask(TimeValue flushInterval, Scheduler scheduler) {// 定时flush index request
         if (flushInterval == null) {
             return new Scheduler.Cancellable() {
                 @Override
@@ -441,7 +441,7 @@ public class BulkProcessor implements Closeable {
     // needs to be executed under a lock
     private Tuple<BulkRequest,Long> newBulkRequestIfNeeded(){
         ensureOpen();
-        if (!isOverTheLimit()) {
+        if (!isOverTheLimit()) {// 判断是可以发送BulkRequest
             return null;
         }
         final BulkRequest bulkRequest = this.bulkRequest;
@@ -464,7 +464,7 @@ public class BulkProcessor implements Closeable {
     }
 
     // needs to be executed under a lock
-    private boolean isOverTheLimit() {
+    private boolean isOverTheLimit() {// 判断缓存的bulkrequest的大小和数量是否超过配置
         if (bulkActions != -1 && bulkRequest.numberOfActions() >= bulkActions) {
             return true;
         }

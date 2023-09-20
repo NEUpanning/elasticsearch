@@ -272,11 +272,11 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                                 for (int i = 0; i < bulkRequest.requests.size(); i++) {
                                     DocWriteRequest<?> request = bulkRequest.requests.get(i);
                                     if (request != null && setResponseFailureIfIndexMatches(responses, i, request, index, e)) {
-                                        bulkRequest.requests.set(i, null);
+                                        bulkRequest.requests.set(i, null); // 释放内存
                                     }
                                 }
                             }
-                            if (counter.decrementAndGet() == 0) {
+                            if (counter.decrementAndGet() == 0) {// 所有索引创建执行完成，执行bulk
                                 executeBulk(task, bulkRequest, startTime, ActionListener.wrap(listener::onResponse, inner -> {
                                     inner.addSuppressed(e);
                                     listener.onFailure(inner);

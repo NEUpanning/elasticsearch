@@ -164,7 +164,7 @@ public abstract class TransportNodesAction<NodesRequest extends BaseNodesRequest
         }
 
         void start() {
-            final DiscoveryNode[] nodes = request.concreteNodes();
+            final DiscoveryNode[] nodes = request.concreteNodes(); // 当前节点集群状态中的nodes
             if (nodes.length == 0) {
                 // nothing to notify
                 threadPool.generic().execute(() -> listener.onResponse(newResponse(request, responses)));

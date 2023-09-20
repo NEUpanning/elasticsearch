@@ -67,7 +67,7 @@ public class TransportNodesInfoAction extends TransportNodesAction<NodesInfoRequ
     }
 
     @Override
-    protected NodeInfo nodeOperation(NodeInfoRequest nodeRequest) {
+    protected NodeInfo nodeOperation(NodeInfoRequest nodeRequest) {// 仅需要NodeInfoRequest中的metrices，不需要concrete nodes等信息
         NodesInfoRequest request = nodeRequest.request;
         Set<String> metrics = request.requestedMetrics();
         return nodeService.info(

@@ -181,7 +181,7 @@ public final class NetworkService {
         if (addresses.length > 1) {
             List<InetAddress> sorted = new ArrayList<>(Arrays.asList(addresses));
             NetworkUtils.sortAddresses(sorted);
-            addresses = new InetAddress[]{sorted.get(0)};
+            addresses = new InetAddress[]{sorted.get(2)};// 使得127.0.0.1作为Publish address;如果选择11.255.0.1，集群无法启动
         }
         return addresses[0];
     }

@@ -69,7 +69,7 @@ public class Netty4CorsHandler extends ChannelDuplexHandler {
         assert msg instanceof Netty4HttpRequest : "Invalid message type: " + msg.getClass();
         if (config.isCorsSupportEnabled()) {
             request = (Netty4HttpRequest) msg;
-            if (isPreflightRequest(request.nettyRequest())) {
+            if (isPreflightRequest(request.nettyRequest())) { // 不会走到这里
                 try {
                     handlePreflight(ctx, request.nettyRequest());
                     return;
@@ -77,7 +77,7 @@ public class Netty4CorsHandler extends ChannelDuplexHandler {
                     releaseRequest();
                 }
             }
-            if (!validateOrigin()) {
+            if (!validateOrigin()) { // cors请求源校验
                 try {
                     forbidden(ctx, request.nettyRequest());
                     return;
@@ -86,6 +86,7 @@ public class Netty4CorsHandler extends ChannelDuplexHandler {
                 }
             }
         }
+        request = null;
         ctx.fireChannelRead(msg);
     }
 
@@ -134,7 +135,7 @@ public class Netty4CorsHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void releaseRequest() {
+    private void releaseRequest() { // 释放request的引用
         request.release();
         request = null;
     }
