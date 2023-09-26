@@ -93,7 +93,7 @@ public class IndicesStatsResponse extends BroadcastResponse {
         }
 
         indicesStats = indexToIndexStatsBuilder.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().build()));
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().build())); // 构建indicesStats
         return indicesStats;
     }
 

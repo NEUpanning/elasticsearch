@@ -83,7 +83,7 @@ public class TransportGetSettingsAction extends TransportMasterNodeReadAction<Ge
 
     @Override
     protected void masterOperation(GetSettingsRequest request, ClusterState state, ActionListener<GetSettingsResponse> listener) {
-        Index[] concreteIndices = indexNameExpressionResolver.concreteIndices(state, request);
+        Index[] concreteIndices = indexNameExpressionResolver.concreteIndices(state, request);// 根据传参的indices获得真正的索引列表
         ImmutableOpenMap.Builder<String, Settings> indexToSettingsBuilder = ImmutableOpenMap.builder();
         ImmutableOpenMap.Builder<String, Settings> indexToDefaultSettingsBuilder = ImmutableOpenMap.builder();
         for (Index concreteIndex : concreteIndices) {
@@ -97,7 +97,7 @@ public class TransportGetSettingsAction extends TransportMasterNodeReadAction<Ge
                 indexSettings = IndexMetadata.addHumanReadableSettings(indexSettings);
             }
 
-            if (isFilteredRequest(request)) {
+            if (isFilteredRequest(request)) { // 正则传参过滤indexSettings
                 indexSettings = indexSettings.filter(k -> Regex.simpleMatch(request.names(), k));
             }
 

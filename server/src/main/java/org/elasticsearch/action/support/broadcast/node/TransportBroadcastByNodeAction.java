@@ -407,7 +407,7 @@ public abstract class TransportBroadcastByNodeAction<Request extends BroadcastRe
                 if (shardResultOrExceptions[i] instanceof BroadcastShardOperationFailedException) {
                     accumulatedExceptions.add((BroadcastShardOperationFailedException) shardResultOrExceptions[i]);
                 } else {
-                    results.add((ShardOperationResult) shardResultOrExceptions[i]);
+                    results.add((ShardOperationResult) shardResultOrExceptions[i]);// 保存结果并返回，单个失败不影响返回
                 }
             }
 

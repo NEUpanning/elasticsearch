@@ -190,7 +190,7 @@ public class NodeIndicesStats implements Writeable, ToXContentFragment {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        final String level = params.param("level", "node");
+        final String level = params.param("level", "node");// node, indices, or shards level. 对于Node level不需要this.statsByShard
         final boolean isLevelValid =
             "indices".equalsIgnoreCase(level) || "node".equalsIgnoreCase(level) || "shards".equalsIgnoreCase(level);
         if (!isLevelValid) {
@@ -230,7 +230,7 @@ public class NodeIndicesStats implements Writeable, ToXContentFragment {
         return builder;
     }
 
-    private Map<Index, CommonStats> createStatsByIndex() {
+    private Map<Index, CommonStats> createStatsByIndex() { // index粒度聚合shard stats
         Map<Index, CommonStats> statsMap = new HashMap<>();
         for (Map.Entry<Index, List<IndexShardStats>> entry : statsByShard.entrySet()) {
             if (!statsMap.containsKey(entry.getKey())) {

@@ -57,8 +57,8 @@ public final class GroupedActionListener<T> implements ActionListener<T> {
 
     @Override
     public void onResponse(T element) {
-        results.setOnce(pos.incrementAndGet() - 1, element);
-        if (countDown.countDown()) {
+        results.setOnce(pos.incrementAndGet() - 1, element); // 保存结果
+        if (countDown.countDown()) { // 累积response数量够了会触发
             if (failure.get() != null) {
                 delegate.onFailure(failure.get());
             } else {

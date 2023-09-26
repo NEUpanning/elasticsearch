@@ -67,8 +67,7 @@ public class RestNodeAttrsAction extends AbstractCatAction {
 
         return channel -> client.admin().cluster().state(clusterStateRequest, new RestActionListener<ClusterStateResponse>(channel) {
             @Override
-            public void processResponse(final ClusterStateResponse clusterStateResponse) {
-                NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
+            public void processResponse(final ClusterStateResponse clusterStateResponse) {NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
                 nodesInfoRequest.clear()
                     .addMetric(NodesInfoRequest.Metric.PROCESS.metricName());
                 client.admin().cluster().nodesInfo(nodesInfoRequest, new RestResponseListener<NodesInfoResponse>(channel) {

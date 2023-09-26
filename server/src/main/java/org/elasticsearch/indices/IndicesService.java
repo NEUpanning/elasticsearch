@@ -414,7 +414,7 @@ public class IndicesService extends AbstractLifecycleComponent
             }
         }
 
-        return new NodeIndicesStats(commonStats, statsByShard(this, flags));
+        return new NodeIndicesStats(commonStats, statsByShard(this, flags));// 分别为summary stats 和 shard stats
     }
 
     Map<Index, List<IndexShardStats>> statsByShard(final IndicesService indicesService, final CommonStatsFlags flags) {

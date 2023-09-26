@@ -77,7 +77,7 @@ public abstract class TransportNodesAction<NodesRequest extends BaseNodesRequest
     }
 
     @Override
-    protected void doExecute(Task task, NodesRequest request, ActionListener<NodesResponse> listener) {
+    protected void doExecute(Task task, NodesRequest request, ActionListener<NodesResponse> listener) {// 协调节点收到请求，找到对应action执行
         new AsyncAction(task, request, listener).start();
     }
 
@@ -242,7 +242,7 @@ public abstract class TransportNodesAction<NodesRequest extends BaseNodesRequest
         }
     }
 
-    class NodeTransportHandler implements TransportRequestHandler<NodeRequest> {
+    class NodeTransportHandler implements TransportRequestHandler<NodeRequest> {// 收到协调节点请求处理该action的handler
 
         @Override
         public void messageReceived(NodeRequest request, TransportChannel channel, Task task) throws Exception {
