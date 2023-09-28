@@ -76,8 +76,7 @@ public class TransportNodesInfoAction extends TransportNodesAction<
 
     @Override
     protected NodeInfo nodeOperation(NodeInfoRequest nodeRequest, Task task) {
-        NodesInfoRequest request = nodeRequest.request;
-        Set<String> metrics = request.requestedMetrics();
+        Set<String> metrics = nodeRequest.requestedMetrics();
         return nodeService.info(
             metrics.contains(NodesInfoMetrics.Metric.SETTINGS.metricName()),
             metrics.contains(NodesInfoMetrics.Metric.OS.metricName()),
@@ -96,21 +95,25 @@ public class TransportNodesInfoAction extends TransportNodesAction<
 
     public static class NodeInfoRequest extends TransportRequest {
 
-        NodesInfoRequest request;
+        private NodesInfoMetrics nodesInfoMetrics;
 
         public NodeInfoRequest(StreamInput in) throws IOException {
             super(in);
-            request = new NodesInfoRequest(in);
+            nodesInfoMetrics = new NodesInfoMetrics(in);
         }
 
         public NodeInfoRequest(NodesInfoRequest request) {
-            this.request = request;
+            nodesInfoMetrics = request.getNodesInfoMetrics();
         }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             super.writeTo(out);
-            request.writeTo(out);
+            nodesInfoMetrics.writeTo(out);
+        }
+
+        public Set<String> requestedMetrics() {
+            return nodesInfoMetrics.requestedMetrics();
         }
     }
 }
