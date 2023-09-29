@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import static org.elasticsearch.TransportVersions.NODE_INFO_REQUEST_VERSIONS_ADDED;
+
 public class TransportNodesInfoAction extends TransportNodesAction<
     NodesInfoRequest,
     NodesInfoResponse,
@@ -95,25 +97,40 @@ public class TransportNodesInfoAction extends TransportNodesAction<
 
     public static class NodeInfoRequest extends TransportRequest {
 
+        NodesInfoRequest request;
         private NodesInfoMetrics nodesInfoMetrics;
 
         public NodeInfoRequest(StreamInput in) throws IOException {
             super(in);
-            nodesInfoMetrics = new NodesInfoMetrics(in);
+            if (in.getTransportVersion().onOrAfter(NODE_INFO_REQUEST_VERSIONS_ADDED)) {
+                this.nodesInfoMetrics = new NodesInfoMetrics(in);
+            } else {
+                this.request = new NodesInfoRequest(in);
+            }
         }
 
         public NodeInfoRequest(NodesInfoRequest request) {
-            nodesInfoMetrics = request.getNodesInfoMetrics();
+            this.nodesInfoMetrics = request.getNodesInfoMetrics();
+            this.request = request;
         }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             super.writeTo(out);
-            nodesInfoMetrics.writeTo(out);
+            if (out.getTransportVersion().onOrAfter(NODE_INFO_REQUEST_VERSIONS_ADDED)) {
+                this.nodesInfoMetrics.writeTo(out);
+            } else {
+                this.request.writeTo(out);
+            }
         }
 
         public Set<String> requestedMetrics() {
-            return nodesInfoMetrics.requestedMetrics();
+            if (nodesInfoMetrics != null) {
+                return nodesInfoMetrics.requestedMetrics();
+            } else {
+                assert request != null;
+                return request.requestedMetrics();
+            }
         }
     }
 }
