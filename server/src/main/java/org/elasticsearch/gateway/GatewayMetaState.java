@@ -133,7 +133,7 @@ public class GatewayMetaState implements Closeable {
             return;
         }
 
-        if (DiscoveryNode.isMasterNode(settings) || DiscoveryNode.isDataNode(settings)) {
+        if (DiscoveryNode.isMasterNode(settings) || DiscoveryNode.isDataNode(settings)) { // master/data节点才加载cluster state
             try {
                 final PersistedClusterStateService.OnDiskState onDiskState = persistedClusterStateService.loadBestOnDiskState();
 
@@ -160,7 +160,7 @@ public class GatewayMetaState implements Closeable {
                             .version(lastAcceptedVersion)
                             .metadata(upgradeMetadataForNode(metadata, metadataIndexUpgradeService, metadataUpgrader))
                             .build());
-
+                    // 初始化cluster state持久化策略
                     if (DiscoveryNode.isMasterNode(settings)) {
                         persistedState = new LucenePersistedState(persistedClusterStateService, currentTerm, clusterState);
                     } else {

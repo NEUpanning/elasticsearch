@@ -184,7 +184,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             IndexRequest indexRequest = getIndexWriteRequest(actionRequest);// 从DocWriteRequest中的index update拿到index request
             if (indexRequest != null) {
                 // Each index request needs to be evaluated, because this method also modifies the IndexRequest
-                boolean indexRequestHasPipeline = IngestService.resolvePipelines(actionRequest, indexRequest, metadata);
+                boolean indexRequestHasPipeline = IngestService.resolvePipelines(actionRequest, indexRequest, metadata);// 如果集群配置了默认的pipeline会set给indexrequest
                 hasIndexRequestsWithPipelines |= indexRequestHasPipeline;
             }
 
@@ -259,7 +259,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                         new ActionListener<CreateIndexResponse>() {//异步并发创建索引
                         @Override
                         public void onResponse(CreateIndexResponse result) {
-                            if (counter.decrementAndGet() == 0) {//当所有索引创建完成时，执行bulk
+                            if (counter.decrementAndGet() == 0) {//当所有索引创建完成时，使用write线程池执行bulk。如果没创建索引使用的是transport_worker线程池
                                 threadPool.executor(ThreadPool.Names.WRITE).execute(
                                     () -> executeBulk(task, bulkRequest, startTime, listener, responses, indicesThatCannotBeCreated));
                             }
@@ -380,12 +380,12 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
 
     /**
      * retries on retryable cluster blocks, resolves item requests,
-     * constructs shard bulk requests and delegates execution to shard bulk action
+     * constructs shard bulk requests and delegates execution to shard bulk action  单次写入请求创建一个
      * */
     private final class BulkOperation extends ActionRunnable<BulkResponse> {
         private final Task task;
         private BulkRequest bulkRequest; // set to null once all requests are sent out
-        private final AtomicArray<BulkItemResponse> responses;
+        private final AtomicArray<BulkItemResponse> responses;// 返回给client的结果
         private final long startTimeNanos;
         private final ClusterStateObserver observer;
         private final Map<String, IndexNotFoundException> indicesThatCannotBeCreated;
@@ -415,11 +415,11 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 //the request can only be null because we set it to null in the previous step, so it gets ignored
                 if (docWriteRequest == null) {
                     continue;
-                }//索引存在且是open状态才能继续写入数据
+                }//索引存在且是open状态才能继续写入数据，否则将failure加入对应的response
                 if (addFailureIfIndexIsUnavailable(docWriteRequest, i, concreteIndices, metadata)) {
                     continue;
                 }
-                Index concreteIndex = concreteIndices.resolveIfAbsent(docWriteRequest);
+                Index concreteIndex = concreteIndices.resolveIfAbsent(docWriteRequest);//有可能用的alias,正则，需要解析
                 try {
                     switch (docWriteRequest.opType()) {
                         case CREATE:
@@ -446,7 +446,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                             break;
                         default: throw new AssertionError("request type not supported: [" + docWriteRequest.opType() + "]");
                     }
-                } catch (ElasticsearchParseException | IllegalArgumentException | RoutingMissingException e) {
+                } catch (ElasticsearchParseException | IllegalArgumentException | RoutingMissingException e) { // 异常情况将异常封装到response
                     BulkItemResponse.Failure failure = new BulkItemResponse.Failure(concreteIndex.getName(), docWriteRequest.type(),
                         docWriteRequest.id(), e);
                     BulkItemResponse bulkItemResponse = new BulkItemResponse(i, docWriteRequest.opType(), failure);
@@ -465,7 +465,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 }
                 String concreteIndex = concreteIndices.getConcreteIndex(request.index()).getName();
                 ShardId shardId = clusterService.operationRouting().indexShards(clusterState, concreteIndex, request.id(),
-                    request.routing()).shardId();//计算出shard id
+                    request.routing()).shardId();//计算出shard id,https://www.elastic.co/guide/en/elasticsearch/reference/8.11/mapping-routing-field.html
                 List<BulkItemRequest> shardRequests = requestsByShard.computeIfAbsent(shardId, shard -> new ArrayList<>());
                 shardRequests.add(new BulkItemRequest(i, request));
             }

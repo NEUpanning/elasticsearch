@@ -271,9 +271,9 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
         synchronized (mutex) {
             logger.trace("handleApplyCommit: applying commit {}", applyCommitRequest);
 
-            coordinationState.get().handleCommit(applyCommitRequest);//处理request，可能不会做什么
+            coordinationState.get().handleCommit(applyCommitRequest);//处理request，LastAcceptedState标记为commited
             final ClusterState committedState = hideStateIfNotRecovered(coordinationState.get().getLastAcceptedState());
-            applierState = mode == Mode.CANDIDATE ? clusterStateWithNoMasterBlock(committedState) : committedState;
+            applierState = mode == Mode.CANDIDATE ? clusterStateWithNoMasterBlock(committedState) : committedState; // 更新applier state为新的state
             if (applyCommitRequest.getSourceNode().equals(getLocalNode())) {
                 // master node applies the committed state at the end of the publication process, not here.
                 applyListener.onResponse(null);
@@ -320,7 +320,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
             final ClusterState localState = coordinationState.get().getLastAcceptedState();
 
             if (localState.metadata().clusterUUIDCommitted() &&
-                localState.metadata().clusterUUID().equals(publishRequest.getAcceptedState().metadata().clusterUUID()) == false) {
+                localState.metadata().clusterUUID().equals(publishRequest.getAcceptedState().metadata().clusterUUID()) == false) {// 请求的来源集群检查
                 logger.warn("received cluster state from {} with a different cluster uuid {} than local cluster uuid {}, rejecting",
                     sourceNode, publishRequest.getAcceptedState().metadata().clusterUUID(), localState.metadata().clusterUUID());
                 throw new CoordinationStateRejectedException("received cluster state from " + sourceNode +
@@ -587,7 +587,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
             method, getCurrentTerm(), mode, lastKnownLeader);
 
         mode = Mode.LEADER;
-        joinAccumulator.close(mode);
+        joinAccumulator.close(mode); //这里会更新集群状态
         joinAccumulator = joinHelper.new LeaderJoinAccumulator();
 
         lastKnownLeader = Optional.of(getLocalNode());
@@ -1103,7 +1103,7 @@ public class Coordinator extends AbstractLifecycleComponent implements Discovery
                 final PublicationTransportHandler.PublicationContext publicationContext =
                     publicationHandler.newPublicationContext(clusterChangedEvent);
 
-                final PublishRequest publishRequest = coordinationState.get().handleClientValue(clusterState);
+                final PublishRequest publishRequest = coordinationState.get().handleClientValue(clusterState); // 使用clusterState创建的publishRequest
                 final CoordinatorPublication publication = new CoordinatorPublication(publishRequest, publicationContext,
                     new ListenableFuture<>(), ackListener, publishListener);//CoordinatorPublication实例的创建，就开始超时计时
                 currentPublication = Optional.of(publication);

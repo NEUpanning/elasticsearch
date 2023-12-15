@@ -167,7 +167,7 @@ final class Bootstrap {
     }
 
     private void setup(boolean addShutdownHook, Environment environment) throws BootstrapException {
-        Settings settings = environment.settings();
+        Settings settings = environment.settings(); // config/elasticseach.yml的settings
 
         try {
             spawner.spawnNativeControllers(environment, true);
@@ -175,7 +175,7 @@ final class Bootstrap {
             throw new BootstrapException(e);
         }
 
-        initializeNatives(
+        initializeNatives( // 调用native方法执行配置
                 environment.tmpFile(),
                 BootstrapSettings.MEMORY_LOCK_SETTING.get(settings),
                 BootstrapSettings.SYSTEM_CALL_FILTER_SETTING.get(settings),

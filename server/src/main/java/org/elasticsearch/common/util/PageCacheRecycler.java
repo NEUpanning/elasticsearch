@@ -36,7 +36,7 @@ import static org.elasticsearch.common.recycler.Recyclers.concurrentDeque;
 import static org.elasticsearch.common.recycler.Recyclers.dequeFactory;
 import static org.elasticsearch.common.recycler.Recyclers.none;
 
-/** A recycler of fixed-size pages. */
+/** A recycler of fixed-size pages. 和linux的page cache没任何关系 #4557 */
 public class PageCacheRecycler {
 
     public static final Setting<Type> TYPE_SETTING =

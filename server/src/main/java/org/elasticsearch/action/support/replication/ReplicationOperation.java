@@ -225,7 +225,7 @@ public class ReplicationOperation<
                         shard.shardId(), shard.currentNodeId(), replicaException, restStatus, false));
                 }
                 String message = String.format(Locale.ROOT, "failed to perform %s on replica %s", opType, shard);
-                replicasProxy.failShardIfNeeded(shard, primaryTerm, message, replicaException,
+                replicasProxy.failShardIfNeeded(shard, primaryTerm, message, replicaException, // 写入操作对应WriteActionReplicasProxy
                     ActionListener.wrap(r -> decPendingAndFinishIfNeeded(), ReplicationOperation.this::onNoLongerPrimary));
             }
 

@@ -44,7 +44,7 @@ public class CoordinationMetadata implements Writeable, ToXContentFragment {
     public static final CoordinationMetadata EMPTY_METADATA = builder().build();
 
     private final long term;
-
+    // 这两个VotingConfiguration用于实现raft中的change configuration算法，决策需要同时满足二者的quorum
     private final VotingConfiguration lastCommittedConfiguration;
 
     private final VotingConfiguration lastAcceptedConfiguration;

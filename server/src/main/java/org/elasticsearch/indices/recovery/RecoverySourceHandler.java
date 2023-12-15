@@ -313,7 +313,7 @@ public class RecoverySourceHandler {
                 final long endingSeqNo = shard.seqNoStats().getMaxSeqNo();
                 logger.trace("snapshot translog for recovery; current size is [{}]",
                     shard.estimateNumberOfHistoryOperations("peer-recovery", historySource, startingSeqNo));
-                final Translog.Snapshot phase2Snapshot = shard.getHistoryOperations("peer-recovery", historySource, startingSeqNo);//根据startingSeqNo对lucene index和translog做快照
+                final Translog.Snapshot phase2Snapshot = shard.getHistoryOperations("peer-recovery", historySource, startingSeqNo);//根据startingSeqNo查询lucene找到doc
                 resources.add(phase2Snapshot);
                 retentionLock.close();
 

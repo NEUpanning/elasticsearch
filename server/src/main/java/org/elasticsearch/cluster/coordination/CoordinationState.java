@@ -195,7 +195,7 @@ public class CoordinationState {
             logger.debug("handleStartJoin: discarding {}: {}", joinVotes, reason);
         }
 
-        persistedState.setCurrentTerm(startJoinRequest.getTerm());
+        persistedState.setCurrentTerm(startJoinRequest.getTerm()); // 更新current term
         assert getCurrentTerm() == startJoinRequest.getTerm();
         lastPublishedVersion = 0;
         lastPublishedConfiguration = getLastAcceptedConfiguration();
@@ -316,7 +316,7 @@ public class CoordinationState {
             "last committed configuration should not change";
 
         lastPublishedVersion = clusterState.version();
-        lastPublishedConfiguration = clusterState.getLastAcceptedConfiguration();
+        lastPublishedConfiguration = clusterState.getLastAcceptedConfiguration(); // 配置lastPublishedConfiguration，对应raft中的收到Configuration便使用他做决策
         publishVotes = new VoteCollection();
 
         logger.trace("handleClientValue: processing request for version [{}] and term [{}]", lastPublishedVersion, getCurrentTerm());
@@ -490,7 +490,7 @@ public class CoordinationState {
             Metadata.Builder metadataBuilder = null;
             if (lastAcceptedState.getLastAcceptedConfiguration().equals(lastAcceptedState.getLastCommittedConfiguration()) == false) {
                 final CoordinationMetadata coordinationMetadata = CoordinationMetadata.builder(lastAcceptedState.coordinationMetadata())
-                        .lastCommittedConfiguration(lastAcceptedState.getLastAcceptedConfiguration())
+                        .lastCommittedConfiguration(lastAcceptedState.getLastAcceptedConfiguration())// CommittedConfiguration配置为LastAcceptedConfiguration
                         .build();
                 metadataBuilder = Metadata.builder(lastAcceptedState.metadata());
                 metadataBuilder.coordinationMetadata(coordinationMetadata);

@@ -295,9 +295,9 @@ public abstract class TransportReplicationAction<
 
     protected void handlePrimaryRequest(final ConcreteShardRequest<Request> request, final TransportChannel channel, final Task task) {
         Releasable releasable = checkPrimaryLimits(request.getRequest(), request.sentFromLocalReroute(),
-            request.localRerouteInitiatedByNodeClient());//没用
+            request.localRerouteInitiatedByNodeClient());//
         ActionListener<Response> listener =
-            ActionListener.runBefore(new ChannelActionListener<>(channel, transportPrimaryAction, request), releasable::close);
+            ActionListener.runBefore(new ChannelActionListener<>(channel, transportPrimaryAction, request), releasable::close); // 将结果返回的listener
 
         try {
             new AsyncPrimaryAction(request, listener, (ReplicationTask) task).run();
@@ -378,7 +378,7 @@ public abstract class TransportReplicationAction<
                     final ShardRouting primary = primaryShardReference.routingEntry();
                     assert primary.relocating() : "indexShard is marked as relocated but routing isn't" + primary;
                     final Writeable.Reader<Response> reader = TransportReplicationAction.this::newResponseInstance;
-                    DiscoveryNode relocatingNode = clusterState.nodes().get(primary.relocatingNodeId());
+                    DiscoveryNode relocatingNode = clusterState.nodes().get(primary.relocatingNodeId()); // relocation target node
                     transportService.sendRequest(relocatingNode, transportPrimaryAction,
                         new ConcreteShardRequest<>(primaryRequest.getRequest(), primary.allocationId().getRelocationId(),
                             primaryRequest.getPrimaryTerm()), transportOptions,
@@ -775,7 +775,7 @@ public abstract class TransportReplicationAction<
                         + "version [{}]] is older than on sending node (version [{}]), scheduling a retry...", request.shardId(), request,
                     state.version(), request.routedBasedOnClusterVersion());
                 retryBecauseUnavailable(request.shardId(), "failed to find primary as current cluster state with version ["
-                    + state.version() + "] is stale (expected at least [" + request.routedBasedOnClusterVersion() + "]");
+                    + state.version() + "] is stale (expected at least [" + request.routedBasedOnClusterVersion() + "]");// 这个状态是当前节点为新的primary但没收到对应的cluster state，发起路由的节点收到了，所以现在需要等待本节点更新cluster state好执行写入，不然会死循环#16274
                 return;
             } else {
                 // chasing the node with the active primary for a second hop requires that we are at least up-to-date with the current
@@ -807,7 +807,7 @@ public abstract class TransportReplicationAction<
 
                 @Override
                 public void handleResponse(Response response) {
-                    finishOnSuccess(response);
+                    finishOnSuccess(response); // 标记reroute phase完成，触发listener统计response
                 }
 
                 @Override
@@ -841,7 +841,7 @@ public abstract class TransportReplicationAction<
             }
             setPhase(task, "waiting_for_retry");
             request.onRetry();
-            observer.waitForNextChange(new ClusterStateObserver.Listener() {
+            observer.waitForNextChange(new ClusterStateObserver.Listener() {// cluster state变更就触发
                 @Override
                 public void onNewClusterState(ClusterState state) {
                     run();//执行的是reroutePhase的dorun，重试写入

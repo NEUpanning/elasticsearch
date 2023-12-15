@@ -104,7 +104,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
 
     private final Queue<NotifyTimeout> onGoingTimeouts = ConcurrentCollections.newQueue();
 
-    private final AtomicReference<ClusterState> state; // last applied state
+    private final AtomicReference<ClusterState> state; // The currently applied cluster state. 节点使用的cluster state就是这个
 
     private final String nodeName;
 
@@ -498,7 +498,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
             + " on " + newClusterState.nodes().getLocalNode();
 
         logger.debug("set locally applied cluster state to version {}", newClusterState.version());
-        state.set(newClusterState);//更改维护的集群状态
+        state.set(newClusterState);//更改维护的集群状态，操作完成后state就生效了
 
         callClusterStateListeners(clusterChangedEvent, stopWatch);//调用所有的listeners
     }
