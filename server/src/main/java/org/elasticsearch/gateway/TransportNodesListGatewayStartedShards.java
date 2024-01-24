@@ -120,7 +120,7 @@ public class TransportNodesListGatewayStartedShards extends
             ShardStateMetadata shardStateMetadata = ShardStateMetadata.FORMAT.loadLatestState(logger, namedXContentRegistry,
                 nodeEnv.availableShardPaths(request.shardId));// 分片级别元数据
             if (shardStateMetadata != null) {
-                if (indicesService.getShardOrNull(shardId) == null) {
+                if (indicesService.getShardOrNull(shardId) == null) { // indicesService中没有shard元数据则尝试open该shard
                     final String customDataPath;
                     if (request.getCustomDataPath() != null) {
                         customDataPath = request.getCustomDataPath();

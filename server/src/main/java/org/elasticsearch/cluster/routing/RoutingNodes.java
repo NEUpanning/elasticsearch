@@ -240,7 +240,7 @@ public class RoutingNodes implements Iterable<RoutingNode> {
         return nodesToShards.get(nodeId);
     }
 
-    public ObjectIntHashMap<String> nodesPerAttributesCounts(String attributeName) {
+    public ObjectIntHashMap<String> nodesPerAttributesCounts(String attributeName) { //build on demand
         ObjectIntHashMap<String> nodesPerAttributesCounts = nodesPerAttributeNames.get(attributeName);
         if (nodesPerAttributesCounts != null) {
             return nodesPerAttributesCounts;

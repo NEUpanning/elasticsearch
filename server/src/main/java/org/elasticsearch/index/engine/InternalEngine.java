@@ -499,7 +499,7 @@ public class InternalEngine extends Engine {
         logger.trace(() -> new ParameterizedMessage(
                 "flushing post recovery from translog: ops recovered [{}], current translog generation [{}]",
                 opsRecovered, translog.currentFileGeneration()));
-        flush(false, true);// flush translog
+        flush(false, true);// flush data
         translog.trimUnreferencedReaders();
     }
 

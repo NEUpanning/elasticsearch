@@ -384,7 +384,7 @@ public abstract class ReplicaShardAllocator extends BaseGatewayShardAllocator {
         final long retainingSeqNoForPrimary = primaryStore.getPeerRecoveryRetentionLeaseRetainingSeqNo(primaryNode);
         final long retainingSeqNoForReplica = primaryStore.getPeerRecoveryRetentionLeaseRetainingSeqNo(replicaNode);
         final boolean isNoopRecovery = (retainingSeqNoForReplica >= retainingSeqNoForPrimary && retainingSeqNoForPrimary >= 0)
-            || hasMatchingSyncId(primaryStore, replicaStore);//true代表replica是最新数据
+            || hasMatchingSyncId(primaryStore, replicaStore);//true代表replica是最新数据， replica SeqNo > primary SeqNo或者replica flush(lucene commit) id = primary
         final long matchingBytes = computeMatchingBytes(primaryStore, replicaStore);//计算主和副相同文件的总大小
         return new MatchingNode(matchingBytes, retainingSeqNoForReplica, isNoopRecovery);
     }

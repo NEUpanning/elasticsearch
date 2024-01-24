@@ -134,7 +134,7 @@ public class AwarenessAllocationDecider extends AllocationDecider {
 
         IndexMetadata indexMetadata = allocation.metadata().getIndexSafe(shardRouting.index());
         int shardCount = indexMetadata.getNumberOfReplicas() + 1; // 1 for primary
-        for (String awarenessAttribute : awarenessAttributes) {
+        for (String awarenessAttribute : awarenessAttributes) { // 遍历分片分配感知的Attributes
             // the node the shard exists on must be associated with an awareness attribute
             if (node.node().getAttributes().containsKey(awarenessAttribute) == false) {
                 return allocation.decision(Decision.NO, NAME,
@@ -143,12 +143,12 @@ public class AwarenessAllocationDecider extends AllocationDecider {
                     allocation.debugDecision() ? Strings.collectionToCommaDelimitedString(awarenessAttributes) : null);
             }
 
-            // build attr_value -> nodes map
+            // build attr_value -> nodes map   attr实际值 -> 对应节点数量
             ObjectIntHashMap<String> nodesPerAttribute = allocation.routingNodes().nodesPerAttributesCounts(awarenessAttribute);
 
-            // build the count of shards per attribute value
+            // build the count of shards per attribute value       shard attr实际值 -> shard数量
             ObjectIntHashMap<String> shardPerAttribute = new ObjectIntHashMap<>();
-            for (ShardRouting assignedShard : allocation.routingNodes().assignedShards(shardRouting.shardId())) {
+            for (ShardRouting assignedShard : allocation.routingNodes().assignedShards(shardRouting.shardId())) { // 分片组的所有shard
                 if (assignedShard.started() || assignedShard.initializing()) {
                     // Note: this also counts relocation targets as that will be the new location of the shard.
                     // Relocation sources should not be counted as the shard is moving away
@@ -171,7 +171,7 @@ public class AwarenessAllocationDecider extends AllocationDecider {
                 }
             }
 
-            int numberOfAttributes = nodesPerAttribute.size();
+            int numberOfAttributes = nodesPerAttribute.size(); // 该attr key的value种类
             List<String> fullValues = forcedAwarenessAttributes.get(awarenessAttribute);
             if (fullValues != null) {
                 for (String fullValue : fullValues) {

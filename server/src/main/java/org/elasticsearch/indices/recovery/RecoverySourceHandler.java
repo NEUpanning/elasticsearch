@@ -190,7 +190,7 @@ public class RecoverySourceHandler {
             } else {
                 historySource = Engine.HistorySource.TRANSLOG;
             }
-            final Closeable retentionLock = shard.acquireHistoryRetentionLock(historySource);//获取锁，保证translog不被清理。因为这些新增的translog需要在replica回放
+            final Closeable retentionLock = shard.acquireHistoryRetentionLock(historySource);//获取锁，保证translog不被清理。因为这些新增的translog需要在replica回放。
             resources.add(retentionLock);
             final long startingSeqNo;
             final boolean isSequenceNumberBasedRecovery //判断是否可以从SequenceNumber恢复

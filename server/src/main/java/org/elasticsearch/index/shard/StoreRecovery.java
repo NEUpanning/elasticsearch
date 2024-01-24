@@ -395,7 +395,7 @@ final class StoreRecovery {
                             "shard allocated for local recovery (post api), should exist, but doesn't, current files: " + files, e);
                     }
                 }
-                if (si != null && indexShouldExists == false) {
+                if (si != null && indexShouldExists == false) { // 预期文件夹不存在数据，但存在数据的情况，直接清除
                     // it exists on the directory, but shouldn't exist on the FS, its a leftover (possibly dangling)
                     // its a "new index create" API, we have to do something, so better to clean it than use same data
                     logger.trace("cleaning existing shard, shouldn't exists");

@@ -161,7 +161,7 @@ public class FetchPhase implements SearchPhase {
                 int docId = docs[index].docId;// doc在外部呈现的docId
                 int readerIndex = ReaderUtil.subIndex(docId, context.searcher().getIndexReader().leaves());// 查找这个docId在哪个Segment上面
                 LeafReaderContext subReaderContext = context.searcher().getIndexReader().leaves().get(readerIndex);
-                int subDocId = docId - subReaderContext.docBase;// 计算出这个docId在当前segment上的doc编号
+                int subDocId = docId - subReaderContext.docBase;// 计算出这个docId在当前segment上的doc编号,用于查询
 
                 final SearchHit searchHit;
                 int rootDocId = findRootDocumentIfNested(context, subReaderContext, subDocId);

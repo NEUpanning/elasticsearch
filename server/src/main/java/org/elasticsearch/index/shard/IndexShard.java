@@ -1605,7 +1605,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
             return runTranslogRecovery(engine, snapshot, Engine.Operation.Origin.LOCAL_TRANSLOG_RECOVERY,
                 translogRecoveryStats::incrementRecoveredOperations);
         };
-        loadGlobalCheckpointToReplicationTracker();
+        loadGlobalCheckpointToReplicationTracker(); // 从translog读取global checkpoint并保存
         innerOpenEngineAndTranslog(replicationTracker);
         getEngine().recoverFromTranslog(translogRecoveryRunner, Long.MAX_VALUE);
     }
@@ -1632,7 +1632,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         // we disable deletes since we allow for operations to be executed against the shard while recovering
         // but we need to make sure we don't loose deletes until we are done recovering
         config.setEnableGcDeletes(false);//关闭translog删除
-        updateRetentionLeasesOnReplica(loadRetentionLeases());
+        updateRetentionLeasesOnReplica(loadRetentionLeases()); // 更新自己维护的retention lease
         assert recoveryState.getRecoverySource().expectEmptyRetentionLeases() == false || getRetentionLeases().leases().isEmpty()
             : "expected empty set of retention leases with recovery source [" + recoveryState.getRecoverySource()
             + "] but got " + getRetentionLeases();
