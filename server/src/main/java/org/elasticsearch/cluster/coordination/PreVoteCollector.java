@@ -192,7 +192,7 @@ public class PreVoteCollector {
                 return;
             }
 
-            updateMaxTermSeen.accept(response.getCurrentTerm());
+            updateMaxTermSeen.accept(response.getCurrentTerm()); // 无论该节点是否投票都要更新MaxTermSeen，因为我们需要用当前最大term+1发起选举
 
             if (response.getLastAcceptedTerm() > clusterState.term()
                 || (response.getLastAcceptedTerm() == clusterState.term()
